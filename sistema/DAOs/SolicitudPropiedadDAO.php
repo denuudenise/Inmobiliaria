@@ -21,12 +21,12 @@ final class SolicitudPropiedadDAO
 
             $insert = $this->db->prepare(
                 'INSERT INTO solicitudes_publicacion
-                 (id_cliente, id_tipo_propiedad, id_tipo_transaccion, titulo, direccion, localidad,
+                 (id_cliente, id_tipo_propiedad, id_tipo_transaccion, id_estado_verificacion,
+                  titulo, direccion, localidad,
                   descripcion, precio_estimado, superficie_total_m2, ambientes, dormitorios, banos,
-                  antiguedad_anos, estado)
-                 VALUES (:cliente, :tipo, :operacion, :titulo, :direccion, :localidad,
-                  :descripcion, :precio, :superficie, :ambientes, :dormitorios, :banos, :antiguedad,
-                  "Pendiente de Verificación")'
+                  antiguedad_anos)
+                 VALUES (:cliente, :tipo, :operacion, 2, :titulo, :direccion, :localidad,
+                  :descripcion, :precio, :superficie, :ambientes, :dormitorios, :banos, :antiguedad)'
             );
             $insert->execute([
                 'cliente' => $clientId,
@@ -72,11 +72,12 @@ final class SolicitudPropiedadDAO
     public function findForClient(int $clientId): array
     {
         $statement = $this->db->prepare(
-            'SELECT s.id_solicitud, s.titulo, s.localidad, s.estado, s.motivo_rechazo,
+            'SELECT s.id_solicitud, s.titulo, s.localidad, ev.nombre AS estado, s.motivo_rechazo,
                     s.fecha_solicitud, tp.nombre AS tipo, tt.nombre AS operacion
              FROM solicitudes_publicacion s
              INNER JOIN tipos_propiedad tp ON tp.id_tipo_propiedad = s.id_tipo_propiedad
              INNER JOIN tipos_transaccion tt ON tt.id_tipo_transaccion = s.id_tipo_transaccion
+             INNER JOIN estados_verificacion ev ON ev.id_estado_verificacion = s.id_estado_verificacion
              WHERE s.id_cliente = :id ORDER BY s.fecha_solicitud DESC'
         );
         $statement->execute(['id' => $clientId]);

@@ -507,6 +507,7 @@ CREATE TABLE IF NOT EXISTS solicitudes_publicacion (
   id_cliente INT NOT NULL,
   id_tipo_propiedad INT NOT NULL,
   id_tipo_transaccion INT NOT NULL,
+  id_estado_verificacion INT NOT NULL DEFAULT 2,
   titulo VARCHAR(200) NOT NULL,
   direccion VARCHAR(255) NOT NULL,
   localidad VARCHAR(100) NOT NULL,
@@ -517,7 +518,6 @@ CREATE TABLE IF NOT EXISTS solicitudes_publicacion (
   dormitorios INT DEFAULT NULL,
   banos INT DEFAULT NULL,
   antiguedad_anos INT DEFAULT 0,
-  estado ENUM('Pendiente de Verificación','En revisión','En contacto','Aprobada','Rechazada') NOT NULL DEFAULT 'Pendiente de Verificación',
   motivo_rechazo TEXT DEFAULT NULL,
   fecha_solicitud DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -526,7 +526,8 @@ CREATE TABLE IF NOT EXISTS solicitudes_publicacion (
   KEY idx_solicitud_estado (estado),
   CONSTRAINT fk_solicitud_cliente FOREIGN KEY (id_cliente) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
   CONSTRAINT fk_solicitud_tipo FOREIGN KEY (id_tipo_propiedad) REFERENCES tipos_propiedad (id_tipo_propiedad),
-  CONSTRAINT fk_solicitud_operacion FOREIGN KEY (id_tipo_transaccion) REFERENCES tipos_transaccion (id_tipo_transaccion)
+  CONSTRAINT fk_solicitud_operacion FOREIGN KEY (id_tipo_transaccion) REFERENCES tipos_transaccion (id_tipo_transaccion),
+  CONSTRAINT fk_solicitud_verificacion FOREIGN KEY (id_estado_verificacion) REFERENCES estados_verificacion (id_estado_verificacion)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS solicitud_multimedia (
