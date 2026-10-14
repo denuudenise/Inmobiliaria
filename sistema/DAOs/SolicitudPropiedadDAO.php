@@ -44,6 +44,8 @@ final class SolicitudPropiedadDAO
                 'antiguedad' => $data['antiguedad'] === '' ? 0 : $data['antiguedad'],
             ]);
             $requestId = (int)$this->db->lastInsertId();
+            $currency=$this->db->prepare('UPDATE solicitudes_publicacion SET moneda=? WHERE id_solicitud=?');
+            $currency->execute([$data['moneda']??'USD',$requestId]);
 
             if ($files) {
                 $media = $this->db->prepare(

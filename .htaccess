@@ -1,5 +1,6 @@
 Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteRule ^(sistema|configuracion|base_datos|herramientas)(/|$) - [F,L]
   RewriteRule (^|/)\. - [F]
 </IfModule>

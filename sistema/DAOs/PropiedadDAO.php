@@ -14,8 +14,10 @@ final class PropiedadDAO
         $params = [];
 
         if (!empty($filters['location'])) {
-            $where[] = '(p.localidad LIKE :location OR p.direccion LIKE :location)';
-            $params['location'] = '%' . trim($filters['location']) . '%';
+            $where[] = '(p.localidad LIKE :location_city OR p.direccion LIKE :location_address OR p.titulo LIKE :location_title)';
+            $params['location_city'] = '%' . trim($filters['location']) . '%';
+            $params['location_address'] = $params['location_city'];
+            $params['location_title'] = $params['location_city'];
         }
         if (!empty($filters['type'])) {
             $where[] = 'tp.nombre = :type';
@@ -26,6 +28,13 @@ final class PropiedadDAO
             $params['operation'] = $filters['operation'];
         }
 
+        if (!empty($filters['currency']) && in_array($filters['currency'], ['USD','ARS'], true)) {
+            $where[] = 'p.moneda = :currency'; $params['currency'] = $filters['currency'];
+        }
+        if (isset($filters['max_price']) && is_numeric($filters['max_price']) && (float)$filters['max_price'] > 0) {
+            $where[] = 'p.precio <= :max_price'; $params['max_price'] = $filters['max_price'];
+        }
+        if (!empty($filters['bedrooms'])) { $where[] = 'p.dormitorios >= :bedrooms'; $params['bedrooms'] = (int)$filters['bedrooms']; }
         $limit = max(1, min($limit, 100));
         $sql = 'SELECT p.id_propiedad, p.titulo, p.direccion, p.localidad, p.precio,
                        p.moneda, p.descripcion, p.superficie_total_m2, p.ambientes,

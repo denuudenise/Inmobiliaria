@@ -1,34 +1,20 @@
 <?php
-declare(strict_types=1);
-require __DIR__ . '/sistema/Nucleo/inicio.php';
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-$property = null;
-$images = [];
-$dbUnavailable = false;
-if ($id) {
-    try {
-        $dao = new PropiedadDAO(Database::connection());
-        $property = $dao->findById($id);
-        if ($property) $images = $dao->findImages($id);
-    } catch (PDOException $error) {
-        error_log('No se pudo cargar la propiedad: ' . $error->getMessage());
-        $dbUnavailable = true;
-    }
+require __DIR__.'/sistema/Nucleo/inicio.php';
+$id=(int)($_GET['id']??0); $dao=new PropiedadDAO(Database::connection()); $property=$dao->findById($id); $error='';
+if (!$property) http_response_code(404);
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+ $user=require_client(); verify_csrf(); $message=trim($_POST['mensaje']??'');
+ if (!$property) $error='Esta propiedad ya no está disponible.';
+ elseif (mb_strlen($message)<10 || mb_strlen($message)>3000) $error='Escribí una consulta de entre 10 y 3000 caracteres.';
+ else { execute_sql('INSERT INTO consultas (id_cliente,id_propiedad,mensaje) VALUES (?,?,?)',[$user['id'],$id,$message]); flash('Consulta enviada. Podés ver la respuesta en Mis consultas.'); redirect('/Inmobiliaria/propiedad.php?id='.$id.'#contacto'); }
 }
-$pageTitle = $property ? $property['titulo'] : 'Detalle de propiedad';
-require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
+$images=$property?$dao->findImages($id):[]; $photos=array_values(array_filter($images,fn($m)=>$m['tipo']==='Imagen')); $videos=array_values(array_filter($images,fn($m)=>$m['tipo']==='Video'));
+$pageTitle=$property?$property['titulo']:'Propiedad no disponible'; require __DIR__.'/sistema/Vistas/Diseno/encabezado.php';
 ?>
-<section class="dashboard">
-  <?php if ($dbUnavailable): ?><div class="content-card"><h2>Detalle no disponible</h2><p>No hay conexión con la base de datos en este momento.</p><a class="btn" href="/Inmobiliaria/index.php">Volver al catálogo</a></div>
-  <?php elseif (!$property): ?><div class="content-card"><h2>Propiedad no encontrada</h2><p>La propiedad puede haber sido retirada o ya no estar disponible.</p><a class="btn" href="/Inmobiliaria/index.php">Volver al catálogo</a></div>
-  <?php else: ?>
-    <?php $heroImage = $images[0]['url_archivo'] ?? 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1400&q=85'; ?>
-    <a class="text-link" href="/Inmobiliaria/index.php#catalogo">← Volver a propiedades</a>
-    <div class="content-card" style="margin-top:15px"><div class="property-photo" style="height:min(52vw,440px);border-radius:12px;background-image:url('<?= e($heroImage) ?>')"><span class="pill"><?= e($property['operacion']) ?></span></div>
-      <?php if (count($images) > 1): ?><div style="display:flex;gap:8px;margin-top:10px;overflow:auto"><?php foreach (array_slice($images,1) as $media): ?><img src="<?= e($media['url_archivo']) ?>" alt="Foto de <?= e($property['titulo']) ?>" style="width:130px;height:84px;object-fit:cover;border-radius:8px"><?php endforeach; ?></div><?php endif; ?>
-      <div class="data-grid" style="margin-top:22px"><div><h1 style="margin:0 0 8px"><?= e($property['titulo']) ?></h1><p class="property-place">⌖ &nbsp;<?= e($property['direccion']) ?>, <?= e($property['localidad']) ?></p><p style="line-height:1.7;color:#566c78"><?= nl2br(e($property['descripcion'] ?: 'Consultanos para conocer más sobre esta propiedad.')) ?></p></div><div class="data-box"><span class="status blue"><?= e($property['operacion']) ?> · <?= e($property['tipo']) ?></span><p class="price" style="font-size:25px;margin-top:17px"><?= e($property['moneda']) ?> <?= e(number_format((float)$property['precio'], 0, ',', '.')) ?></p><div class="data-row">▣ &nbsp; Superficie total: <?= e((string)$property['superficie_total_m2']) ?> m²</div><div class="data-row">▱ &nbsp; Ambientes: <?= e((string)($property['ambientes'] ?? '—')) ?></div><div class="data-row">♧ &nbsp; Dormitorios: <?= e((string)($property['dormitorios'] ?? '—')) ?></div><div class="data-row">♨ &nbsp; Baños: <?= e((string)($property['banos'] ?? '—')) ?></div><a class="btn" style="display:block;text-align:center;margin-top:14px" href="/Inmobiliaria/login.php">Consultar por esta propiedad</a></div></div>
-    </div>
-  <?php endif; ?>
-</section>
-<?php require __DIR__ . '/sistema/Vistas/Diseno/pie.php'; ?>
-
+<section class="dashboard"><?php notice(); ?><a class="text-link" href="/Inmobiliaria/index.php#catalogo">← Volver al catálogo</a>
+<?php if(!$property): ?><div class="empty-state"><h1>Propiedad no disponible</h1><p>Puede haber sido retirada, vendida o alquilada.</p></div><?php else: ?>
+<div class="property-detail"><div class="gallery"><img id="galleryMain" class="gallery-main" src="<?= e($photos[0]['url_archivo']??'/Inmobiliaria/recursos/imagenes/propiedad.svg') ?>" alt="<?= e($property['titulo']) ?>"><div class="gallery-thumbs"><?php foreach($photos as $i=>$photo): ?><button type="button" data-gallery="<?= e($photo['url_archivo']) ?>" aria-label="Ver foto <?= $i+1 ?>" aria-pressed="<?= $i===0?'true':'false' ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Vista <?= $i+1 ?>"></button><?php endforeach; ?></div><?php foreach($videos as $video): ?><video controls preload="metadata" src="<?= e($video['url_archivo']) ?>"></video><?php endforeach; ?></div><div class="content-card property-summary"><span class="status blue"><?= e($property['operacion'].' · '.$property['tipo']) ?></span><h1><?= e($property['titulo']) ?></h1><p><?= e($property['localidad']) ?></p><p class="price"><?= e($property['moneda'].' '.number_format((float)$property['precio'],0,',','.')) ?><?= $property['operacion']==='Venta'?'':' / mes' ?></p><dl class="features"><div><dt>Dormitorios</dt><dd><?= e((string)($property['dormitorios']??'—')) ?></dd></div><div><dt>Baños</dt><dd><?= e((string)($property['banos']??'—')) ?></dd></div><div><dt>Superficie</dt><dd><?= e((string)$property['superficie_total_m2']) ?> m²</dd></div><div><dt>Ambientes</dt><dd><?= e((string)($property['ambientes']??'—')) ?></dd></div></dl><div class="actions"><a class="btn" href="#contacto">Contactar</a><?php if(!current_user() || current_user()['role']==='Cliente'): ?><button class="btn btn-outline" data-favorite="<?= $id ?>" aria-label="Guardar propiedad en favoritos">♡</button><?php endif; ?></div></div></div>
+<div class="detail-lower"><div class="content-card"><h2>Sobre esta propiedad</h2><p class="description"><?= nl2br(e($property['descripcion'])) ?></p><?php $features=query_rows('SELECT c.nombre FROM propiedad_caracteristicas pc JOIN caracteristicas c ON c.id_caracteristica=pc.id_caracteristica WHERE pc.id_propiedad=?',[$id]); if($features): ?><h3>Características</h3><div class="actions"><?php foreach($features as $f): ?><span class="status"><?= e($f['nombre']) ?></span><?php endforeach; ?></div><?php endif; ?><details class="record"><summary>Ubicación y otros datos</summary><div class="record-body"><p><?= e($property['direccion'].', '.$property['localidad']) ?></p><p>Antigüedad: <?= (int)$property['antiguedad_anos'] ?> años</p><a class="text-link" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($property['direccion'].', '.$property['localidad'].', Argentina') ?>">Ver ubicación en el mapa ↗</a></div></details></div>
+<div class="content-card" id="contacto"><h2>¿Te interesa?</h2><p class="content-subtitle">Consultá por una visita o pedí más información.</p><?php if($error): ?><div class="notice error" role="alert"><?= e($error) ?></div><?php endif; ?><?php if(current_user() && current_user()['role']==='Cliente'): ?><form method="post" class="modal-form"><?php csrf_field(); ?><div class="field"><label for="mensaje">Tu consulta</label><textarea id="mensaje" name="mensaje" required minlength="10" maxlength="3000" placeholder="Hola, me gustaría coordinar una visita…"><?= e((string)($_POST['mensaje']??'')) ?></textarea></div><button class="btn">Enviar consulta</button></form><p><a class="text-link" href="/Inmobiliaria/cliente/actividad.php?seccion=consultas">Ver mis consultas</a></p><?php elseif(!current_user()): ?><p>Ingresá como cliente para enviar tu consulta y recibir la respuesta en tu panel.</p><a class="btn" href="/Inmobiliaria/login.php?propiedad=<?= $id ?>">Ingresar para consultar</a><?php else: ?><p>Estás viendo el catálogo como <?= e(current_user()['role']) ?>.</p><a class="btn" href="/Inmobiliaria/gestion/index.php?seccion=consultas">Gestionar consultas</a><?php endif; ?></div></div>
+<?php endif; ?></section>
+<?php require __DIR__.'/sistema/Vistas/Diseno/pie.php'; ?>

@@ -11,7 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = trim((string)($_POST['telefono'] ?? ''));
     $email = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    if ($password !== (string)($_POST['password_confirm'] ?? '')) {
+    if ($name === '' || $surname === '' || !preg_match('/^[0-9]{7,10}$/', $dni) || strlen($name)>100 || strlen($surname)>100 || strlen($email)>150 || strlen($phone)>30) {
+        $errorMessage = 'Completá nombre, apellido y un DNI válido de 7 a 10 dígitos.';
+    } elseif ($password !== (string)($_POST['password_confirm'] ?? '')) {
         $errorMessage = 'Las contraseñas no coinciden.';
     } elseif (strlen($password) < 8) {
         $errorMessage = 'La contraseña debe tener al menos 8 caracteres.';
@@ -27,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'id' => (int)$user['id_usuario'], 'name' => $user['nombre'], 'surname' => $user['apellido'],
                 'dni' => $user['dni'], 'phone' => $user['telefono'], 'email' => $user['email'], 'role' => $user['rol'],
             ];
+            flash('¡Cuenta creada! Ya podés guardar propiedades y enviar consultas.');
             redirect(role_destination('Cliente'));
         } catch (PDOException $error) {
             error_log('Error de registro: ' . $error->getMessage());
