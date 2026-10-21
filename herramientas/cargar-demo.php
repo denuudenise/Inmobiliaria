@@ -37,8 +37,8 @@ try {
    if ($state===3) execute_sql('UPDATE propiedades SET id_solicitud=? WHERE id_propiedad=? AND id_solicitud IS NULL',[$sid,$propIds[0]]);
   }
  }
- if (!query_rows('SELECT id_consulta FROM consultas WHERE id_cliente=? AND id_propiedad=?',[$ids['cliente'],$propIds[1]])) execute_sql('INSERT INTO consultas (id_cliente,id_propiedad,mensaje) VALUES (?,?,?)',[$ids['cliente'],$propIds[1],'Hola, quisiera coordinar una visita el próximo sábado. ¿Está disponible por la mañana?']);
- execute_sql('INSERT IGNORE INTO favoritos (id_usuario,id_propiedad) VALUES (?,?)',[$ids['cliente'],$propIds[0]]);
+ if (!query_rows("SELECT id_contacto FROM contactos WHERE id_cliente=? AND id_propiedad=? AND tipo='Consulta'",[$ids['cliente'],$propIds[1]])) execute_sql("INSERT INTO contactos (id_cliente,id_agente,id_propiedad,tipo,descripcion) VALUES (?,?,?,'Consulta',?)",[$ids['cliente'],$ids['agente'],$propIds[1],'Hola, quisiera coordinar una visita el próximo sábado. ¿Está disponible por la mañana?']);
+ execute_sql('INSERT INTO intereses (id_cliente,id_propiedad,es_favorito) VALUES (?,?,1) ON DUPLICATE KEY UPDATE es_favorito=1',[$ids['cliente'],$propIds[0]]);
  if (!query_rows('SELECT id_operacion FROM propiedades_cerradas WHERE id_propiedad=?',[$propIds[7]])) execute_sql('INSERT INTO propiedades_cerradas (id_propiedad,id_cliente_comprador,id_agente_cierre,precio_final) VALUES (?,?,?,115000)',[$propIds[7],$ids['cliente'],$ids['agente']]);
  if (!query_rows('SELECT id_alquiler FROM alquileres WHERE id_propiedad=?',[$propIds[8]])) execute_sql("INSERT INTO alquileres (id_propiedad,id_cliente,id_agente,monto_mensual,fecha_inicio,fecha_fin,estado) VALUES (?,?,?,720000,'2026-10-01','2027-09-30','Activo')",[$propIds[8],$ids['cliente'],$ids['agente']]);
  $db->commit(); echo "Datos demo listos.\n";

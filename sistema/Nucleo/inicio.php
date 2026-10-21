@@ -57,7 +57,12 @@ function require_client(): array
 
 function role_destination(string $role): string
 {
-    return $role === 'Cliente' ? '/Inmobiliaria/cliente/index.php' : '/Inmobiliaria/gestion/index.php';
+    return match ($role) {
+        'Cliente' => '/Inmobiliaria/cliente/index.php',
+        'Administrador' => '/Inmobiliaria/administrador.php',
+        'Agente' => '/Inmobiliaria/agente.php',
+        default => '/Inmobiliaria/index.php',
+    };
 }
 
 function require_user(array $roles = ['Cliente','Agente','Administrador']): array

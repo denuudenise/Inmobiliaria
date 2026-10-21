@@ -36,7 +36,7 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
       <div class="nav-item"><a href="/Inmobiliaria/cliente/solicitar-propiedad.php" class="nav-link">Vender</a></div>
       <div class="nav-item"><a href="/Inmobiliaria/cliente/solicitudes.php" class="nav-link">Mis solicitudes</a></div>
     <?php elseif ($currentUser): ?>
-      <div class="nav-item"><a href="/Inmobiliaria/gestion/index.php" class="nav-link">Gestión</a></div>
+      <div class="nav-item"><a href="<?= e(role_destination(current_user()['role'])) ?>" class="nav-link">Gestión</a></div>
     <?php else: ?>
       <div class="nav-item"><a href="/Inmobiliaria/login.php" class="nav-link">Vender</a></div>
       <div class="nav-item"><a href="/Inmobiliaria/login.php" class="nav-link">Mis solicitudes</a></div>

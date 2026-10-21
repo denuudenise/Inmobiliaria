@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS solicitudes_publicacion (
   fecha_actualizacion DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id_solicitud),
   KEY idx_solicitud_cliente_fecha (id_cliente, fecha_solicitud),
-  KEY idx_solicitud_estado (estado),
+  KEY idx_solicitud_estado (id_estado_verificacion),
   CONSTRAINT fk_solicitud_cliente FOREIGN KEY (id_cliente) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
   CONSTRAINT fk_solicitud_tipo FOREIGN KEY (id_tipo_propiedad) REFERENCES tipos_propiedad (id_tipo_propiedad),
   CONSTRAINT fk_solicitud_operacion FOREIGN KEY (id_tipo_transaccion) REFERENCES tipos_transaccion (id_tipo_transaccion),
