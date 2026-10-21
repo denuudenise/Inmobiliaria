@@ -9,7 +9,7 @@ $sales = [];
 $rentals = [];
 $dbUnavailable = false;
 
-/* CARGA DE OPERACIONES DEL CLIENTE*/
+
 try {
     $dao = new PropiedadDAO(Database::connection());
 
@@ -28,7 +28,6 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 ?>
 
 <section class="dashboard">
-
    
     <div class="dashboard-title">
         <div>
@@ -40,7 +39,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
     <div class="dash-layout">
 
-        <!-- ============ MENÚ LATERAL ============ -->
+      
         <?php require dirname(__DIR__) . '/sistema/Vistas/Cliente/navegacion.php'; ?>
 
 
@@ -50,7 +49,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
             <?php if ($dbUnavailable): ?>
 
-                <!-- Base de datos no disponible -->
+              
                 <div class="not-implemented">
                     No se pudo consultar el historial. Revisá que MySQL esté iniciado y que las migraciones del proyecto estén aplicadas.
                 </div>
@@ -78,7 +77,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                 </div>
 
 
-                <!-- ============ COMPRAS ============ -->
+                
                 <div class="data-box" style="margin-bottom:16px">
                     <h3>Compras</h3>
 
@@ -120,7 +119,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                 </div>
 
 
-                <!-- ============ ALQUILERES ============ -->
+              
                 <div class="data-box">
                     <h3>Alquileres</h3>
 

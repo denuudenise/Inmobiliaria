@@ -307,6 +307,55 @@ $consults = query_rows(
     [(int)$admin, $user['id'], $like, $like]
 );
 
+$dashboardClients = query_rows(
+    'SELECT DISTINCT u.id_usuario,u.nombre,u.apellido,u.email,u.telefono,
+            MAX(COALESCE(CASE WHEN pc.id_propiedad IS NOT NULL THEN c.fecha END,
+                         CASE WHEN pi.id_propiedad IS NOT NULL THEN i.fecha END,
+                         s.fecha_solicitud)) AS ultima_actividad,
+            COUNT(DISTINCT p.id_propiedad) AS propiedades_vinculadas
+     FROM usuarios u
+     LEFT JOIN contactos c ON c.id_cliente=u.id_usuario
+     LEFT JOIN propiedades pc ON pc.id_propiedad=c.id_propiedad AND pc.id_agente_creador=?
+     LEFT JOIN intereses i ON i.id_cliente=u.id_usuario
+     LEFT JOIN propiedades pi ON pi.id_propiedad=i.id_propiedad AND pi.id_agente_creador=?
+     LEFT JOIN solicitudes_publicacion s ON s.id_cliente=u.id_usuario AND s.id_agente=?
+     LEFT JOIN propiedades p ON p.id_agente_creador=? AND (p.id_propiedad=pc.id_propiedad OR p.id_propiedad=pi.id_propiedad OR p.id_solicitud=s.id_solicitud)
+     WHERE u.id_rol=3 AND (pc.id_propiedad IS NOT NULL OR pi.id_propiedad IS NOT NULL OR s.id_solicitud IS NOT NULL)
+     GROUP BY u.id_usuario,u.nombre,u.apellido,u.email,u.telefono
+     ORDER BY ultima_actividad DESC, u.nombre
+     LIMIT 5',
+    [$user['id'], $user['id'], $user['id'], $user['id']]
+);
+
+$propertyStates = [];
+foreach ($props as $property) {
+    $state = $property['verificacion'];
+    $propertyStates[$state] = ($propertyStates[$state] ?? 0) + 1;
+}
+$stateColors = ['#24769a', '#e6ad70', '#e77870', '#f2cc8f', '#70b99e'];
+$donutSegments = [];
+$stateColorMap = [];
+$donutOffset = 0;
+$stateIndex = 0;
+foreach ($propertyStates as $state => $total) {
+    $nextOffset = $donutOffset + ($total / max(count($props), 1) * 100);
+    $stateColorMap[$state] = $stateColors[$stateIndex % count($stateColors)];
+    $donutSegments[] = $stateColorMap[$state] . ' ' . $donutOffset . '% ' . $nextOffset . '%';
+    $donutOffset = $nextOffset;
+    $stateIndex++;
+}
+$donutStyle = $donutSegments
+    ? 'background:conic-gradient(' . implode(',', $donutSegments) . ')'
+    : 'background:#e8edef';
+$saleCount = count(array_filter($props, static fn($property) => stripos($property['operacion'], 'venta') !== false));
+$rentalCount = count(array_filter($props, static fn($property) => stripos($property['operacion'], 'alquiler') !== false));
+$operationCounts = ['Venta' => $saleCount, 'Alquiler' => $rentalCount];
+$operationScale = max($operationCounts ?: [0]);
+$reviewCount = count(array_filter($requests, static fn($request) => (int)$request['id_estado_verificacion'] === 2));
+$rejectedCount = count(array_filter($props, static fn($property) => stripos($property['verificacion'], 'rechaz') !== false))
+    + count(array_filter($requests, static fn($request) => stripos($request['estado'], 'rechaz') !== false));
+$pendingConsultCount = count(array_filter($consults, static fn($consult) => $consult['estado'] === 'Pendiente'));
+
 $pageTitle = $sections[$section];
 require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
 
@@ -384,50 +433,60 @@ function person_options(array $people, int $selected = 0): void
                    ================================================ */ ?>
             <?php if ($section === 'resumen'): ?>
 
-                <div class="mini-stat-grid">
-                    <a class="mini-stat" href="?seccion=propiedades">
-                        <strong><?= count($props) ?></strong>
-                        <span>Propiedades a tu cargo</span>
-                    </a>
-
-                    <a class="mini-stat" href="?seccion=solicitudes">
-                        <strong><?= count(array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 2)) ?></strong>
-                        <span>Solicitudes por revisar</span>
-                    </a>
-
-                    <a class="mini-stat" href="?seccion=consultas">
-                        <strong><?= count(array_filter($consults, fn($r) => $r['estado'] === 'Pendiente')) ?></strong>
-                        <span>Consultas sin responder</span>
-                    </a>
-                </div>
-
-                <div class="content-card">
-                    <h2>Próximas tareas</h2>
-                    <p class="content-subtitle">Atendé lo pendiente y después seguí con el catálogo.</p>
-
-                    <?php
-                    $pending = array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 2);
-
-                    foreach (array_slice($pending, 0, 4) as $r):
-                    ?>
-                        <a class="task-row" href="?seccion=solicitudes#solicitud-<?= $r['id_solicitud'] ?>">
-                            <span>
-                                <strong><?= e($r['titulo']) ?></strong>
-                                <small><?= e($r['cliente'] . ' ' . $r['apellido']) ?></small>
-                            </span>
-                            <span class="status amber">Revisar →</span>
-                        </a>
-                    <?php endforeach; ?>
-
-                    <?php if (!$pending): ?>
-                        <p>No hay solicitudes pendientes. Podés revisar las consultas de tus clientes.</p>
-                    <?php endif; ?>
-
-                    <div class="actions">
-                        <a class="btn" href="?seccion=propiedades&editar=0">Nueva propiedad</a>
-                        <a class="btn btn-outline" href="?seccion=consultas">Atender consultas</a>
+                <section class="agent-overview" aria-label="Resumen de actividad del agente">
+                    <div class="agent-welcome">
+                        <div><span class="eyebrow">Tu actividad</span><h2>Resumen de tu gestión</h2><p>Estado actual de tus propiedades, solicitudes y clientes.</p></div>
+                        <a class="btn" href="?seccion=propiedades&editar=0">＋ Cargar propiedad</a>
                     </div>
-                </div>
+
+                    <div class="agent-kpis">
+                        <a class="agent-kpi" href="?seccion=propiedades"><span class="kpi-icon">⌂</span><span><small>Total de propiedades</small><strong><?= count($props) ?></strong></span></a>
+                        <a class="agent-kpi" href="?seccion=propiedades"><span class="kpi-icon blue">↗</span><span><small>En venta</small><strong><?= $saleCount ?></strong></span></a>
+                        <a class="agent-kpi" href="?seccion=propiedades"><span class="kpi-icon green">⌂</span><span><small>En alquiler</small><strong><?= $rentalCount ?></strong></span></a>
+                        <a class="agent-kpi" href="?seccion=solicitudes"><span class="kpi-icon amber">◷</span><span><small>Solicitudes por revisar</small><strong><?= $reviewCount ?></strong></span></a>
+                        <a class="agent-kpi" href="?seccion=solicitudes"><span class="kpi-icon red">!</span><span><small>Rechazadas</small><strong><?= $rejectedCount ?></strong></span></a>
+                    </div>
+
+                    <div class="agent-overview-grid">
+                        <article class="content-card agent-properties-card">
+                            <div class="agent-card-heading"><div><h2>Mis propiedades</h2><p>Últimas propiedades asignadas a tu gestión.</p></div><a class="text-link" href="?seccion=propiedades">Ver todas →</a></div>
+                            <?php if ($props): ?>
+                                <div class="table-wrap"><table class="table agent-summary-table"><thead><tr><th>ID</th><th>Tipo y ubicación</th><th>Precio</th><th>Estado</th><th></th></tr></thead><tbody>
+                                <?php foreach (array_slice($props, 0, 5) as $property): ?>
+                                    <tr><td>#<?= (int)$property['id_propiedad'] ?></td><td><strong><?= e($property['titulo']) ?></strong><small><?= e($property['tipo'] . ' · ' . $property['localidad']) ?></small></td><td><?= e($property['moneda']) ?> <?= number_format((float)$property['precio'], 0, ',', '.') ?></td><td><span class="status blue"><?= e($property['verificacion']) ?></span></td><td><a class="text-link" href="?seccion=propiedades&editar=<?= (int)$property['id_propiedad'] ?>">Gestionar</a></td></tr>
+                                <?php endforeach; ?>
+                                </tbody></table></div>
+                            <?php else: ?><div class="agent-empty">Todavía no tenés propiedades asignadas.</div><?php endif; ?>
+                        </article>
+
+                        <article class="content-card agent-states-card">
+                            <div class="agent-card-heading"><div><h2>Estados de propiedades</h2><p>Distribución según verificación.</p></div></div>
+                            <div class="agent-chart-layout"><div class="agent-donut" style="<?= e($donutStyle) ?>" role="img" aria-label="<?= count($props) ?> propiedades distribuidas por estado"><div><strong><?= count($props) ?></strong><small>Total</small></div></div>
+                                <ul class="agent-legend"><?php if ($propertyStates): foreach ($propertyStates as $state => $total): ?><li><i style="background:<?= e($stateColorMap[$state]) ?>"></i><span><?= e($state) ?></span><strong><?= $total ?> <small>(<?= count($props) ? round($total / count($props) * 100) : 0 ?>%)</small></strong></li><?php endforeach; else: ?><li class="legend-empty">Sin propiedades para graficar.</li><?php endif; ?></ul>
+                            </div>
+                            <div class="agent-operation-chart"><h3>Operaciones del catálogo</h3><?php foreach ($operationCounts as $operation => $total): ?><div class="agent-bar-row"><span><?= e($operation) ?></span><div class="agent-bar-track"><i class="<?= $operation === 'Alquiler' ? 'rent' : 'sale' ?>" style="width:<?= $operationScale ? round($total / $operationScale * 100) : 0 ?>%"></i></div><strong><?= $total ?></strong></div><?php endforeach; ?></div>
+                        </article>
+
+                        <article class="content-card agent-clients-card">
+                            <div class="agent-card-heading"><div><h2>Clientes vinculados</h2><p>Clientes con actividad en tus propiedades.</p></div><a class="text-link" href="?seccion=clientes">Ver todos →</a></div>
+                            <?php if ($dashboardClients): ?><div class="agent-client-list"><?php foreach ($dashboardClients as $client): ?><a href="?seccion=clientes&q=<?= urlencode($client['email']) ?>"><span class="agent-client-avatar"><?= e(mb_strtoupper(mb_substr($client['nombre'], 0, 1))) ?></span><span><strong><?= e($client['nombre'] . ' ' . $client['apellido']) ?></strong><small><?= (int)$client['propiedades_vinculadas'] ?> <?= (int)$client['propiedades_vinculadas'] === 1 ? 'propiedad vinculada' : 'propiedades vinculadas' ?></small></span><span class="status blue">Ver</span></a><?php endforeach; ?></div><?php else: ?><div class="agent-empty">Todavía no hay clientes vinculados a tus propiedades.</div><?php endif; ?>
+                        </article>
+
+                        <article class="content-card agent-requests-card">
+                            <div class="agent-card-heading"><div><h2>Solicitudes de publicación</h2><p>Solicitudes recientes de tus clientes.</p></div><a class="text-link" href="?seccion=solicitudes">Ver todas →</a></div>
+                            <?php if ($requests): ?><div class="agent-request-list"><?php foreach (array_slice($requests, 0, 4) as $request): ?><a href="?seccion=solicitudes#solicitud-<?= (int)$request['id_solicitud'] ?>"><span><strong>#<?= (int)$request['id_solicitud'] ?> · <?= e($request['titulo']) ?></strong><small><?= e($request['cliente'] . ' ' . $request['apellido']) ?> · <?= e(date('d/m/Y', strtotime($request['fecha_solicitud']))) ?></small></span><span class="status <?= (int)$request['id_estado_verificacion'] === 2 ? 'amber' : 'blue' ?>"><?= e($request['estado']) ?></span></a><?php endforeach; ?></div><?php else: ?><div class="agent-empty">No hay solicitudes de publicación para mostrar.</div><?php endif; ?>
+                        </article>
+
+                        <article class="content-card agent-notices-card">
+                            <div class="agent-card-heading"><div><h2>Notificaciones</h2><p>Novedades y tareas pendientes.</p></div><a class="text-link" href="?seccion=consultas">Consultas →</a></div>
+                            <?php $pendingRequests = array_slice(array_filter($requests, static fn($request) => (int)$request['id_estado_verificacion'] === 2), 0, 3); $pendingConsults = array_slice(array_filter($consults, static fn($consult) => $consult['estado'] === 'Pendiente'), 0, 3); ?>
+                            <?php foreach ($pendingRequests as $request): ?><a class="agent-notice" href="?seccion=solicitudes#solicitud-<?= (int)$request['id_solicitud'] ?>"><span class="notice-dot amber">!</span><span><strong>Solicitud pendiente</strong><small><?= e($request['titulo']) ?> · <?= e($request['cliente']) ?></small></span></a><?php endforeach; ?>
+                            <?php foreach ($pendingConsults as $consult): ?><a class="agent-notice" href="?seccion=consultas"><span class="notice-dot blue">✉</span><span><strong>Consulta sin responder</strong><small><?= e($consult['titulo']) ?> · <?= e($consult['nombre'] . ' ' . $consult['apellido']) ?></small></span></a><?php endforeach; ?>
+                            <?php if (!$pendingRequests && !$pendingConsults): ?><div class="agent-empty">Estás al día. No hay tareas pendientes.</div><?php endif; ?>
+                            <div class="agent-notice-footer"><strong><?= $pendingConsultCount ?></strong> consultas pendientes <a href="?seccion=consultas">Revisar</a></div>
+                        </article>
+                    </div>
+                </section>
 
 
             <?php /* ================================================
