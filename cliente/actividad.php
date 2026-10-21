@@ -1,14 +1,152 @@
 <?php
-require dirname(__DIR__).'/sistema/Nucleo/inicio.php'; $user=require_client();
-$section=$_GET['seccion']??'favoritos'; if (!in_array($section,['favoritos','consultas','propiedades'],true)) { http_response_code(404); exit; }
-$pageTitle=['favoritos'=>'Mis favoritos','consultas'=>'Mis consultas','propiedades'=>'Mis propiedades'][$section]; $activePage=$section;
-require dirname(__DIR__).'/sistema/Vistas/Diseno/encabezado.php';
+require dirname(__DIR__) . '/sistema/Nucleo/inicio.php';
+
+$user = require_client();
+
+$section = $_GET['seccion'] ?? 'favoritos';
+
+if (!in_array($section, ['favoritos', 'consultas', 'propiedades'], true)) {
+    http_response_code(404);
+    exit;
+}
+
+$pageTitle = [
+    'favoritos'   => 'Mis favoritos',
+    'consultas'   => 'Mis consultas',
+    'propiedades' => 'Mis propiedades',
+][$section];
+
+$activePage = $section;
+
+require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 ?>
-<section class="dashboard"><div class="dashboard-title"><div><h1><?= $pageTitle ?></h1><p>Tu actividad y las novedades del equipo.</p></div><a class="btn" href="/Inmobiliaria/index.php">Explorar propiedades</a></div><div class="dash-layout"><?php require dirname(__DIR__).'/sistema/Vistas/Cliente/navegacion.php'; ?><div class="content-card">
-<?php if($section==='consultas'): $rows=query_rows('SELECT c.id_contacto,c.descripcion AS mensaje,c.resultado AS respuesta,c.estado,c.fecha,p.titulo FROM contactos c JOIN propiedades p ON p.id_propiedad=c.id_propiedad WHERE c.id_cliente=? AND c.tipo="Consulta" ORDER BY c.fecha DESC',[$user['id']]); foreach($rows as $row): ?><details class="record"><summary><strong><?= e($row['titulo']) ?></strong><span class="status blue"><?= e($row['estado']) ?></span></summary><div class="record-body"><p><?= nl2br(e($row['mensaje'])) ?></p><p class="notice"><?= nl2br(e($row['respuesta']?:'El agente todavía no respondió. Podés volver a esta sección para ver las novedades.')) ?></p></div></details><?php endforeach; ?>
-<?php else:
-$sql=$section==='favoritos'?'SELECT p.*,ev.nombre AS verificacion,ec.nombre AS estado FROM intereses f JOIN propiedades p ON p.id_propiedad=f.id_propiedad JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion JOIN estados_comerciales ec ON ec.id_estado_comercial=p.id_estado_comercial WHERE f.id_cliente=? AND f.es_favorito=1':'SELECT p.*,ev.nombre AS verificacion,ec.nombre AS estado FROM propiedades p JOIN solicitudes_publicacion s ON s.id_solicitud=p.id_solicitud JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion JOIN estados_comerciales ec ON ec.id_estado_comercial=p.id_estado_comercial WHERE s.id_cliente=?';
-$rows=query_rows($sql,[$user['id']]); foreach($rows as $row): ?><article class="task-row"><span><strong><?= e($row['titulo']) ?></strong><small><?= e($row['localidad'].' · '.$row['moneda'].' '.number_format((float)$row['precio'],0,',','.')) ?></small><small><?= e($row['verificacion'].' · '.$row['estado']) ?></small></span><div class="actions"><?php if((int)$row['id_estado_verificacion']===3 && (int)$row['id_estado_comercial']===1): ?><a class="text-link" href="/Inmobiliaria/propiedad.php?id=<?= $row['id_propiedad'] ?>">Ver detalle</a><?php endif; if($section==='favoritos'): ?><button class="btn btn-outline" data-favorite="<?= $row['id_propiedad'] ?>" aria-label="Quitar de favoritos">♥</button><?php endif; ?></div></article><?php endforeach; ?>
-<?php endif; if(!$rows): ?><div class="empty-state"><h2>Todavía no hay elementos</h2><p><?= $section==='favoritos'?'Guardá las propiedades que te interesen con el corazón del catálogo.':($section==='consultas'?'Enviá una consulta desde el detalle de una propiedad.':'Tus propiedades aparecerán cuando se apruebe una solicitud.') ?></p></div><?php endif; ?>
-</div></div></section>
-<?php require dirname(__DIR__).'/sistema/Vistas/Diseno/pie.php'; ?>
+
+<section class="dashboard">
+
+    
+    <div class="dashboard-title">
+        <div>
+            <h1><?= $pageTitle ?></h1>
+            <p>Tu actividad y las novedades del equipo.</p>
+        </div>
+        <a class="btn" href="/Inmobiliaria/index.php">Explorar propiedades</a>
+    </div>
+
+    <div class="dash-layout">
+
+       
+        <?php require dirname(__DIR__) . '/sistema/Vistas/Cliente/navegacion.php'; ?>
+
+      
+        <div class="content-card">
+
+            <?php if ($section === 'consultas'): ?>
+
+                <?php
+                $rows = query_rows(
+                    'SELECT c.id_contacto,
+                            c.descripcion AS mensaje,
+                            c.resultado AS respuesta,
+                            c.estado,
+                            c.fecha,
+                            p.titulo
+                     FROM contactos c
+                     JOIN propiedades p ON p.id_propiedad=c.id_propiedad
+                     WHERE c.id_cliente=?
+                       AND c.tipo="Consulta"
+                     ORDER BY c.fecha DESC',
+                    [$user['id']]
+                );
+
+                foreach ($rows as $row):
+                ?>
+                  
+                    <details class="record">
+                        <summary>
+                            <strong><?= e($row['titulo']) ?></strong>
+                            <span class="status blue"><?= e($row['estado']) ?></span>
+                        </summary>
+
+                        <div class="record-body">
+                            <p><?= nl2br(e($row['mensaje'])) ?></p>
+
+                            <p class="notice">
+                                <?= nl2br(e($row['respuesta'] ?: 'El agente todavía no respondió. Podés volver a esta sección para ver las novedades.')) ?>
+                            </p>
+                        </div>
+                    </details>
+                <?php endforeach; ?>
+
+            <?php else: ?>
+
+                <?php
+                $sql = $section === 'favoritos'
+                    
+                    ? 'SELECT p.*,
+                              ev.nombre AS verificacion,
+                              ec.nombre AS estado
+                       FROM intereses f
+                       JOIN propiedades p ON p.id_propiedad=f.id_propiedad
+                       JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion
+                       JOIN estados_comerciales ec ON ec.id_estado_comercial=p.id_estado_comercial
+                       WHERE f.id_cliente=?
+                         AND f.es_favorito=1'
+                    
+                    : 'SELECT p.*,
+                              ev.nombre AS verificacion,
+                              ec.nombre AS estado
+                       FROM propiedades p
+                       JOIN solicitudes_publicacion s ON s.id_solicitud=p.id_solicitud
+                       JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion
+                       JOIN estados_comerciales ec ON ec.id_estado_comercial=p.id_estado_comercial
+                       WHERE s.id_cliente=?';
+
+                $rows = query_rows($sql, [$user['id']]);
+
+                foreach ($rows as $row):
+                ?>
+                   
+                    <article class="task-row">
+                        <span>
+                            <strong><?= e($row['titulo']) ?></strong>
+                            <small><?= e($row['localidad'] . ' · ' . $row['moneda'] . ' ' . number_format((float)$row['precio'], 0, ',', '.')) ?></small>
+                            <small><?= e($row['verificacion'] . ' · ' . $row['estado']) ?></small>
+                        </span>
+
+                        <div class="actions">
+                            <?php if ((int)$row['id_estado_verificacion'] === 3 && (int)$row['id_estado_comercial'] === 1): ?>
+                                <a class="text-link" href="/Inmobiliaria/propiedad.php?id=<?= $row['id_propiedad'] ?>">Ver detalle</a>
+                            <?php endif; ?>
+
+                            <?php if ($section === 'favoritos'): ?>
+                                <button
+                                    class="btn btn-outline"
+                                    data-favorite="<?= $row['id_propiedad'] ?>"
+                                    aria-label="Quitar de favoritos"
+                                >♥</button>
+                            <?php endif; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+
+            <?php endif; ?>
+
+           
+            <?php if (!$rows): ?>
+                <div class="empty-state">
+                    <h2>Todavía no hay elementos</h2>
+                    <p>
+                        <?= $section === 'favoritos'
+                            ? 'Guardá las propiedades que te interesen con el corazón del catálogo.'
+                            : ($section === 'consultas'
+                                ? 'Enviá una consulta desde el detalle de una propiedad.'
+                                : 'Tus propiedades aparecerán cuando se apruebe una solicitud.') ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
+        </div>
+    </div>
+</section>
+
+<?php require dirname(__DIR__) . '/sistema/Vistas/Diseno/pie.php'; ?>
