@@ -83,11 +83,11 @@ final class PropiedadDAO
     public function findClosedOperationsForClient(int $clientId): array
     {
         $statement = $this->db->prepare(
-            'SELECT p.titulo, p.localidad, pc.precio_final, pc.fecha_cierre,
+            'SELECT p.titulo, p.localidad, pc.precio_final, pc.moneda, pc.fecha_cierre,
                     tt.nombre AS operacion, u.nombre AS agente_nombre, u.apellido AS agente_apellido
              FROM propiedades_cerradas pc
              INNER JOIN propiedades p ON p.id_propiedad = pc.id_propiedad
-             INNER JOIN tipos_transaccion tt ON tt.id_tipo_transaccion = p.id_tipo_transaccion
+             INNER JOIN tipos_transaccion tt ON tt.id_tipo_transaccion = COALESCE(pc.id_tipo_transaccion,p.id_tipo_transaccion)
              INNER JOIN usuarios u ON u.id_usuario = pc.id_agente_cierre
              WHERE pc.id_cliente_comprador = :id
              ORDER BY pc.fecha_cierre DESC'

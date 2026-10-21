@@ -31,6 +31,9 @@ final class GestionDAO
                     if ((float)$r['precio_estimado']<=0) throw new RuntimeException('La solicitud necesita un precio mayor a cero antes de publicarse.');
                     execute_sql('INSERT INTO propiedades (id_tipo_propiedad,id_tipo_transaccion,titulo,direccion,localidad,precio,moneda,descripcion,superficie_total_m2,ambientes,dormitorios,banos,antiguedad_anos,id_agente_creador,id_admin_verificador,id_estado_verificacion,id_estado_comercial,fecha_verificacion,id_solicitud) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,3,1,NOW(),?)',[$r['id_tipo_propiedad'],$r['id_tipo_transaccion'],$r['titulo'],$r['direccion'],$r['localidad'],$r['precio_estimado'],$r['moneda'],$r['descripcion'],$r['superficie_total_m2'],$r['ambientes'],$r['dormitorios'],$r['banos'],$r['antiguedad_anos'],$agent,$user['id'],$id]);
                     $property=(int)$this->db->lastInsertId();
+                    (new ModeloCompartidoDAO($this->db))->client((int)$r['id_cliente'],'Propietario');
+                    execute_sql('UPDATE propiedades SET id_propietario=? WHERE id_propiedad=?',[$r['id_cliente'],$property]);
+                    (new ModeloCompartidoDAO($this->db))->property($property,(int)$r['id_cliente']);
                     execute_sql('INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo) SELECT ?,url_archivo,tipo FROM solicitud_multimedia WHERE id_solicitud=?',[$property,$id]);
                     execute_sql('UPDATE solicitudes_publicacion SET id_estado_verificacion=3,motivo_rechazo=NULL WHERE id_solicitud=?',[$id]);
                 } else throw new RuntimeException('Acción inválida.');
@@ -46,7 +49,7 @@ final class GestionDAO
         if ($title==='' || mb_strlen($title)>200 || $address==='' || mb_strlen($address)>255 || $city==='' || mb_strlen($city)>100 || trim($data['descripcion']??'')==='') throw new RuntimeException('Revisá título, dirección, localidad y descripción.');
         if (!is_numeric($data['precio']??'') || (float)$data['precio']<=0 || (float)$data['precio']>9999999999 || !is_numeric($data['superficie']??'') || (float)$data['superficie']<=0 || (float)$data['superficie']>999999) throw new RuntimeException('Ingresá precio y superficie válidos.');
         foreach (['ambientes','dormitorios','banos'] as $field) if (filter_var($data[$field]??'',FILTER_VALIDATE_INT)===false || (int)$data[$field]<0 || (int)$data[$field]>100) throw new RuntimeException('Los ambientes, dormitorios y baños deben ser enteros entre 0 y 100.');
-        if (!in_array($data['moneda']??'', ['USD','ARS'],true) || !in_array((int)($data['tipo']??0),range(1,6),true) || !in_array((int)($data['operacion']??0),[1,2,3],true)) throw new RuntimeException('Tipo, operación o moneda inválidos.');
+        if (!in_array($data['moneda']??'', ['USD','ARS'],true) || !query_rows('SELECT 1 FROM tipos_propiedad WHERE id_tipo_propiedad=?',[(int)($data['tipo']??0)]) || !query_rows('SELECT 1 FROM tipos_transaccion WHERE id_tipo_transaccion=?',[(int)($data['operacion']??0)])) throw new RuntimeException('Tipo, operación o moneda inválidos.');
         $paths=[];
         $this->db->beginTransaction();
         try {
@@ -65,6 +68,7 @@ final class GestionDAO
             $fields='titulo=?,direccion=?,localidad=?,precio=?,moneda=?,descripcion=?,superficie_total_m2=?,ambientes=?,dormitorios=?,banos=?,id_tipo_propiedad=?,id_tipo_transaccion=?,id_agente_creador=?,id_estado_verificacion=?,id_estado_comercial=?,id_admin_verificador=?';
             if ($id) execute_sql('UPDATE propiedades SET '.$fields.' WHERE id_propiedad=?',[...$values,$id]);
             else { execute_sql('INSERT INTO propiedades SET '.$fields,$values); $id=(int)$this->db->lastInsertId(); }
+            (new ModeloCompartidoDAO($this->db))->property($id,(int)$user['id']);
             $paths=Archivos::images('fotos');
             foreach ($paths as $path) execute_sql("INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo) VALUES (?,?,'Imagen')",[$id,$path]);
             $this->db->commit();
@@ -81,13 +85,14 @@ final class GestionDAO
             $client=(int)($data['cliente']??0); $amount=$data['monto']??'';
             if (!query_rows('SELECT id_usuario FROM usuarios WHERE id_usuario=? AND id_rol=3 AND activo=1',[$client]) || !is_numeric($amount) || (float)$amount<=0 || (float)$amount>9999999999) throw new RuntimeException('Revisá cliente e importe.');
             if ((int)$p['id_tipo_transaccion']===1) {
-                execute_sql('INSERT INTO propiedades_cerradas (id_propiedad,id_cliente_comprador,id_agente_cierre,precio_final) VALUES (?,?,?,?)',[$p['id_propiedad'],$client,$p['id_agente_creador'],$amount]); $state=3;
+                execute_sql('INSERT INTO propiedades_cerradas (id_propiedad,id_cliente_comprador,id_agente_cierre,precio_final,id_tipo_transaccion,moneda) VALUES (?,?,?,?,?,?)',[$p['id_propiedad'],$client,$p['id_agente_creador'],$amount,$p['id_tipo_transaccion'],$p['moneda']]); $state=3;
             } else {
                 $start=$data['inicio']??''; $end=$data['fin']??'';
                 foreach ([$start,$end] as $date) { $d=DateTime::createFromFormat('!Y-m-d',$date); if (!$d || $d->format('Y-m-d')!==$date) throw new RuntimeException('Ingresá fechas válidas para el alquiler.'); }
                 if ($end<=$start) throw new RuntimeException('El fin debe ser posterior al inicio.');
                 execute_sql("INSERT INTO alquileres (id_propiedad,id_cliente,id_agente,monto_mensual,fecha_inicio,fecha_fin,estado) VALUES (?,?,?,?,?,?,'Activo')",[$p['id_propiedad'],$client,$p['id_agente_creador'],$amount,$start,$end]); $state=4;
             }
+            (new ModeloCompartidoDAO($this->db))->client($client,$state===3?'Comprador':'Inquilino');
             execute_sql('UPDATE propiedades SET id_estado_comercial=? WHERE id_propiedad=?',[$state,$p['id_propiedad']]);
             $this->db->commit();
         } catch (Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $e; }

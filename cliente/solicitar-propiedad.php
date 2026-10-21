@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/sistema/Nucleo/inicio.php';
 $user = require_client();
+$allowedTypes = array_column(query_rows('SELECT nombre FROM tipos_propiedad ORDER BY id_tipo_propiedad'),'nombre');
+$allowedOperations = array_column(query_rows('SELECT nombre FROM tipos_transaccion ORDER BY id_tipo_transaccion'),'nombre');
 $errorMessage = '';
 $successMessage = '';
 if (isset($_SESSION['flash_success'])) {
@@ -25,8 +27,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'banos' => trim((string)($_POST['banos'] ?? '')),
         'antiguedad' => trim((string)($_POST['antiguedad'] ?? '')),
     ];
-    $allowedTypes = ['Casa','Departamento','Local','Oficina','Terreno','Cochera'];
-    $allowedOperations = ['Venta','Alquiler','Alquiler Temporario'];
     $invalidNumbers=false;
     foreach (['ambientes','dormitorios','banos','antiguedad'] as $field) if ($data[$field]!=='' && (filter_var($data[$field],FILTER_VALIDATE_INT)===false || (int)$data[$field]<0 || (int)$data[$field]>1000)) $invalidNumbers=true;
     if ($invalidNumbers || !isset($_POST['declaracion']) || !in_array($data['moneda'], ['USD','ARS'], true) || !in_array($data['tipo'], $allowedTypes, true) || !in_array($data['operacion'], $allowedOperations, true)
@@ -102,8 +102,8 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 <section class="dashboard"><div class="dashboard-title"><div><h1>Solicitar publicación</h1><p>Completá la información para que podamos evaluar tu propiedad.</p></div></div><div class="dash-layout"><?php require dirname(__DIR__) . '/sistema/Vistas/Cliente/navegacion.php'; ?><div class="content-card"><h2>Datos de la propiedad</h2><p class="content-subtitle">Un agente te acompañará durante el proceso de revisión.</p>
   <?php if ($successMessage): ?><div class="hint-box" role="status"><?= e($successMessage) ?></div><?php endif; ?><?php if ($errorMessage): ?><div class="not-implemented" role="alert"><?= e($errorMessage) ?></div><?php endif; ?>
   <div class="request-layout"><form class="form-panel" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><div class="form-grid">
-    <div class="field"><label for="tipo">Tipo de propiedad *</label><select id="tipo" name="tipo" required><option value="">Seleccionar</option><?php foreach (['Casa','Departamento','Local','Oficina','Terreno','Cochera'] as $type): ?><option value="<?= e($type) ?>" <?= ($_POST['tipo'] ?? '') === $type ? 'selected' : '' ?>><?= e($type) ?></option><?php endforeach; ?></select></div>
-    <div class="field"><label for="operacion">Operación *</label><select id="operacion" name="operacion" required><option value="">Seleccionar</option><?php foreach (['Venta','Alquiler','Alquiler Temporario'] as $operation): ?><option value="<?= e($operation) ?>" <?= ($_POST['operacion'] ?? '') === $operation ? 'selected' : '' ?>><?= e($operation) ?></option><?php endforeach; ?></select></div>
+    <div class="field"><label for="tipo">Tipo de propiedad *</label><select id="tipo" name="tipo" required><option value="">Seleccionar</option><?php foreach ($allowedTypes as $type): ?><option value="<?= e($type) ?>" <?= ($_POST['tipo'] ?? '') === $type ? 'selected' : '' ?>><?= e($type) ?></option><?php endforeach; ?></select></div>
+    <div class="field"><label for="operacion">Operación *</label><select id="operacion" name="operacion" required><option value="">Seleccionar</option><?php foreach ($allowedOperations as $operation): ?><option value="<?= e($operation) ?>" <?= ($_POST['operacion'] ?? '') === $operation ? 'selected' : '' ?>><?= e($operation) ?></option><?php endforeach; ?></select></div>
     <div class="field full"><label for="titulo">Título de la propiedad *</label><input id="titulo" name="titulo" required maxlength="200" value="<?= e((string)($_POST['titulo'] ?? '')) ?>" placeholder="Ej: Casa luminosa con jardín en San Isidro"></div>
     <div class="field"><label for="direccion">Dirección *</label><input id="direccion" name="direccion" required maxlength="255" value="<?= e((string)($_POST['direccion'] ?? '')) ?>" placeholder="Calle y altura"></div>
     <div class="field"><label for="localidad">Localidad *</label><input id="localidad" name="localidad" required maxlength="100" value="<?= e((string)($_POST['localidad'] ?? '')) ?>" placeholder="Barrio o localidad"></div>

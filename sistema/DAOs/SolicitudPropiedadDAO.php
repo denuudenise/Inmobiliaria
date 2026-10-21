@@ -61,6 +61,7 @@ final class SolicitudPropiedadDAO
                 }
             }
 
+            (new ModeloCompartidoDAO($this->db))->client($clientId,'Propietario');
             $this->db->commit();
             return $requestId;
         } catch (Throwable $error) {

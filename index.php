@@ -12,8 +12,10 @@ $filters = [
     'operation' => trim((string)($_GET['operacion'] ?? '')),
 ];
 $properties = [];
+$propertyTypes = [];
 $dbUnavailable = false;
 try {
+    $propertyTypes = array_column(query_rows('SELECT nombre FROM tipos_propiedad ORDER BY id_tipo_propiedad'),'nombre');
     $properties = (new PropiedadDAO(Database::connection()))->findPublished($filters);
 } catch (PDOException $error) {
     error_log('No se pudo cargar el catálogo: ' . $error->getMessage());
@@ -26,7 +28,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
   <p>Casas, departamentos, terrenos y mucho más.</p>
   <form id="busqueda" class="search-box" action="/Inmobiliaria/index.php" method="get">
     <label class="search-location"><span>⌕</span><input name="ubicacion" value="<?= e($filters['location']) ?>" placeholder="Buscar por ubicación, barrio o localidad…" aria-label="Ubicación"></label>
-    <select name="tipo" aria-label="Tipo de propiedad"><option value="">Tipo de propiedad</option><?php foreach (['Casa','Departamento','Local','Oficina','Terreno','Cochera'] as $type): ?><option value="<?= e($type) ?>" <?= $filters['type'] === $type ? 'selected' : '' ?>><?= e($type) ?></option><?php endforeach; ?></select>
+    <select name="tipo" aria-label="Tipo de propiedad"><option value="">Tipo de propiedad</option><?php foreach ($propertyTypes as $type): ?><option value="<?= e($type) ?>" <?= $filters['type'] === $type ? 'selected' : '' ?>><?= e($type) ?></option><?php endforeach; ?></select>
     <select name="operacion" aria-label="Operación"><option value="">Comprar o alquilar</option><?php foreach (['Venta','Alquiler','Alquiler Temporario'] as $operation): ?><option value="<?= e($operation) ?>" <?= $filters['operation'] === $operation ? 'selected' : '' ?>><?= e($operation) ?></option><?php endforeach; ?></select>
     <select name="moneda" aria-label="Moneda"><option value="">Moneda</option><?php foreach (['USD','ARS'] as $m): ?><option <?= $filters['currency']===$m?'selected':'' ?>><?= $m ?></option><?php endforeach; ?></select>
     <input class="price-filter" name="precio_max" type="number" min="1" placeholder="Precio máximo" aria-label="Precio máximo" value="<?= e($filters['max_price']) ?>">

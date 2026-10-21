@@ -46,9 +46,20 @@ final class UsuarioDAO
 
     public function createClient(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash): int
     {
-        $role = $this->db->query("SELECT id_rol FROM roles WHERE nombre = 'Cliente'")->fetchColumn();
-        if (!$role) {
-            throw new RuntimeException('No está configurado el rol Cliente.');
+        return $this->createUser($name,$surname,$dni,$phone,$email,$passwordHash,3);
+    }
+
+    public function createUser(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash, int $role): int
+    {
+        if (!in_array($role,[1,2,3],true)) throw new RuntimeException('Rol inválido.');
+        $ownsTransaction=!$this->db->inTransaction();
+        if ($ownsTransaction) $this->db->beginTransaction();
+        try {
+        $roleQuery=$this->db->prepare('SELECT id_rol FROM roles WHERE id_rol=?');
+        $roleQuery->execute([$role]);
+        $configuredRole=$roleQuery->fetchColumn();
+        if (!$configuredRole) {
+            throw new RuntimeException('No está configurado el rol solicitado.');
         }
         $statement = $this->db->prepare(
             'INSERT INTO usuarios (nombre, apellido, dni, telefono, email, password_hash, id_rol, activo)
@@ -63,7 +74,14 @@ final class UsuarioDAO
             'password' => $passwordHash,
             'rol' => $role,
         ]);
-        return (int)$this->db->lastInsertId();
+        $id=(int)$this->db->lastInsertId();
+        if ($role===3) (new ModeloCompartidoDAO($this->db))->client($id);
+        if ($ownsTransaction) $this->db->commit();
+        return $id;
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
     }
 }
 
