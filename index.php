@@ -16,6 +16,8 @@ $filters = [
 
 $properties = [];
 $propertyTypes = [];
+$transactionTypes = [];
+$currencies = [];
 $dbUnavailable = false;
 
 
@@ -23,6 +25,14 @@ try {
     $propertyTypes = array_column(
         query_rows('SELECT nombre FROM tipos_propiedad ORDER BY id_tipo_propiedad'),
         'nombre'
+    );
+    $transactionTypes = array_column(
+        query_rows('SELECT nombre FROM tipos_transaccion ORDER BY id_tipo_transaccion'),
+        'nombre'
+    );
+    $currencies = array_column(
+        query_rows('SELECT DISTINCT moneda FROM propiedades WHERE id_estado_verificacion=3 AND id_estado_comercial=1 ORDER BY moneda'),
+        'moneda'
     );
 
     $properties = (new PropiedadDAO(Database::connection()))->findPublished($filters);
@@ -67,7 +77,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
           
             <select name="operacion" aria-label="Operación">
                 <option value="">Comprar o alquilar</option>
-                <?php foreach (['Venta', 'Alquiler', 'Alquiler Temporario'] as $operation): ?>
+                <?php foreach ($transactionTypes as $operation): ?>
                     <option value="<?= e($operation) ?>" <?= $filters['operation'] === $operation ? 'selected' : '' ?>>
                         <?= e($operation) ?>
                     </option>
@@ -77,7 +87,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
        
             <select name="moneda" aria-label="Moneda">
                 <option value="">Moneda</option>
-                <?php foreach (['USD', 'ARS'] as $m): ?>
+                <?php foreach ($currencies as $m): ?>
                     <option <?= $filters['currency'] === $m ? 'selected' : '' ?>>
                         <?= $m ?>
                     </option>
@@ -141,7 +151,10 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <?php
             foreach ($properties as $property):
                 $id       = (int)$property['id_propiedad'];
-                $image    = $property['imagen'] ?: '/Inmobiliaria/recursos/imagenes/propiedad.svg';
+                $image    = (string)($property['imagen'] ?? '');
+                if (!Archivos::isLocalFile($image)) {
+                    $image = '/Inmobiliaria/recursos/imagenes/propiedad.svg';
+                }
                 $currency = $property['moneda'] === 'ARS' ? 'ARS' : 'USD';
                 $price    = number_format((float)$property['precio'], 0, ',', '.');
             ?>

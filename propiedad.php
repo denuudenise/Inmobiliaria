@@ -40,6 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 $images = $property ? $dao->findImages($id) : [];
+$images = array_values(array_filter(
+    $images,
+    static fn(array $media): bool => Archivos::isLocalFile((string)$media['url_archivo'])
+));
 
 $photos = array_values(
     array_filter($images, fn($m) => $m['tipo'] === 'Imagen')

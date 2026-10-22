@@ -2,6 +2,21 @@
 declare(strict_types=1);
 final class Archivos
 {
+    public static function isLocalFile(string $url): bool
+    {
+        $root = realpath(dirname(__DIR__, 2));
+        if ($root === false || $url === '' || str_contains($url, "\0")) return false;
+
+        $relativePath = str_starts_with($url, '/Inmobiliaria/')
+            ? substr($url, strlen('/Inmobiliaria/'))
+            : ltrim($url, '/');
+        $file = realpath($root . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath));
+
+        return $file !== false
+            && str_starts_with(strtolower($file), strtolower($root . DIRECTORY_SEPARATOR))
+            && is_file($file);
+    }
+
     public static function images(string $field): array
     {
         if (!isset($_FILES[$field])) return [];
