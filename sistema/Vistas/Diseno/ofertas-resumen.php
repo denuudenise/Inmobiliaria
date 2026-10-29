@@ -1,0 +1,3 @@
+<?php $summaryDAO=new OfertaDAO(Database::connection());$summaryOffers=$summaryDAO->read($offerKind,(int)$offerId);$summaryFeatures=$summaryDAO->features($offerKind,(int)$offerId); ?>
+<div class="offer-summary"><?php foreach($summaryOffers as $offer): ?><p><strong><?= e($offer['nombre']) ?>:</strong> <?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' / mes':'' ?></p><?php endforeach; ?></div>
+<?php if($summaryFeatures): ?><p><strong>Características:</strong> <?= e(implode(' · ',array_column($summaryFeatures,'nombre'))) ?></p><?php endif; ?>

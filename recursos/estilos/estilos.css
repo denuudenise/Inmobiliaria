@@ -28,3 +28,20 @@
 .agent-overview-grid{grid-template-columns:repeat(12,minmax(0,1fr))}.agent-properties-card{grid-column:span 7}.agent-states-card{grid-column:span 5}.agent-clients-card,.agent-requests-card,.agent-notices-card{grid-column:span 4}.agent-operation-chart{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}.agent-operation-chart h3{font:600 11px 'DM Sans',sans-serif;color:var(--navy);margin:0 0 9px}.agent-bar-row{display:grid;grid-template-columns:58px minmax(50px,1fr) 24px;align-items:center;gap:8px;margin:8px 0;font-size:10px;color:#536977}.agent-bar-row strong{text-align:right;color:var(--navy);font-size:10px}.agent-bar-track{height:8px;border-radius:9px;background:#edf0ee;overflow:hidden}.agent-bar-track i{height:100%;display:block;border-radius:9px;transition:width .4s ease}.agent-bar-track i.sale{background:linear-gradient(90deg,#317a9e,#63a7bd)}.agent-bar-track i.rent{background:linear-gradient(90deg,#55a58a,#87c9a7)}
 @media(max-width:1150px){.agent-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-properties-card,.agent-states-card,.agent-clients-card,.agent-requests-card{grid-column:span 1}.agent-notices-card{grid-column:1/-1}}
 @media(max-width:760px){.agent-overview-grid{grid-template-columns:minmax(0,1fr)}.agent-overview-grid>.content-card{grid-column:1/-1}}
+
+/* Ficha privada y campos legibles en escritorio y celular. */
+.private-fields{min-width:0;border:1px solid var(--line);border-radius:12px;padding:20px;margin:12px 0;grid-column:1/-1}
+.private-fields legend{font-weight:700;padding:0 8px;color:var(--navy)}
+.private-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:18px}
+.private-grid .field{min-width:0}.private-grid input,.private-grid select{width:100%;min-width:0}
+.private-documents{padding-left:20px;overflow-wrap:anywhere}.private-documents li{margin:14px 0}
+.private-page .content-card{margin-bottom:20px}.private-page output{display:block;padding:12px;background:#edf4f6;border-radius:8px;font-weight:700}
+.form-grid .field{min-width:0}.form-grid .field label{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.5;min-height:24px;font-size:14px}
+.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid input,.form-grid select{min-width:0;max-width:100%}
+@media(max-width:650px){.form-grid,.private-grid{grid-template-columns:minmax(0,1fr)}.private-fields{padding:14px}.form-grid .field{grid-column:1/-1}}
+
+.offer-row{display:grid;grid-template-columns:minmax(150px,1.3fr) minmax(100px,1fr) minmax(120px,1fr);gap:14px;padding:16px;border:1px solid var(--line);border-radius:10px;margin:12px 0;align-items:center;background:#fafafa}
+.offer-row.offer-selected{background:#edf5f7;border-color:#73a2b8}.check-option{display:flex!important;align-items:center;gap:10px;cursor:pointer;white-space:normal!important}.check-option input[type=checkbox]{width:19px!important;height:19px;flex:none;margin:0;accent-color:#267598}
+.feature-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:16px}.offer-summary p{font-size:15px;margin:8px 0;line-height:1.6}.offer-row input:disabled,.offer-row select:disabled{opacity:.5}
+.property-photo .pill{max-width:90%;white-space:normal}.features dt{white-space:normal;overflow:visible}
+@media(max-width:700px){.offer-row{grid-template-columns:minmax(0,1fr)}.offer-row .field{min-width:0}.offer-summary p{font-size:14px}}

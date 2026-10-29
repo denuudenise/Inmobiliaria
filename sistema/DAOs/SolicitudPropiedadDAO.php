@@ -5,8 +5,11 @@ final class SolicitudPropiedadDAO
 {
     public function __construct(private PDO $db) {}
 
-    public function create(int $clientId, array $data, array $files = []): int
+    public function create(int $clientId, array $data, array $files = [], array $privateData = []): int
     {
+        $data=array_merge($data,array_intersect_key($privateData,array_flip(['ofertas_form','ofertas','caracteristicas_form','caracteristicas'])));
+        $data=(new OfertaDAO($this->db))->normalize($data,true);
+        $expediente=new ExpedienteDAO($this->db);
         $this->db->beginTransaction();
         try {
             $typeQuery = $this->db->prepare('SELECT id_tipo_propiedad FROM tipos_propiedad WHERE nombre = :nombre');
@@ -61,6 +64,8 @@ final class SolicitudPropiedadDAO
                 }
             }
 
+            (new OfertaDAO($this->db))->save('solicitud',$requestId,$data);
+            $expediente->save(null,$requestId,$clientId,$privateData);
             (new ModeloCompartidoDAO($this->db))->client($clientId,'Propietario');
             $this->db->commit();
             return $requestId;
@@ -68,6 +73,7 @@ final class SolicitudPropiedadDAO
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
+            $expediente->cleanup();
             throw $error;
         }
     }

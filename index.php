@@ -31,7 +31,7 @@ try {
         'nombre'
     );
     $currencies = array_column(
-        query_rows('SELECT DISTINCT moneda FROM propiedades WHERE id_estado_verificacion=3 AND id_estado_comercial=1 ORDER BY moneda'),
+        query_rows('SELECT DISTINCT o.moneda FROM propiedad_ofertas o JOIN propiedades p ON p.id_propiedad=o.id_propiedad WHERE p.id_estado_verificacion=3 AND p.id_estado_comercial=1 ORDER BY o.moneda'),
         'moneda'
     );
 
@@ -183,9 +183,9 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                             <span>▣ &nbsp;<?= e((string)$property['superficie_total_m2']) ?> m²</span>
                         </div>
 
-                        <div class="price">
-                            <?= e($currency) ?> <?= e($price) ?><?= $property['operacion'] !== 'Venta' ? ' <small>/mes</small>' : '' ?>
-                        </div>
+                        <div class="offer-summary">
+<?php foreach ($property['ofertas'] as $offer): ?><p><strong><?= e($offer['nombre']) ?>:</strong> <?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' / mes':'' ?></p><?php endforeach; ?>
+</div>
 
                         <a class="btn" style="display:block;text-align:center" href="/Inmobiliaria/propiedad.php?id=<?= $id ?>">
                             Ver detalle

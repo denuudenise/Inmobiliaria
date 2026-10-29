@@ -260,7 +260,7 @@ $props = query_rows(
             ev.nombre AS verificacion,
             ec.nombre AS estado,
             tp.nombre AS tipo,
-            tt.nombre AS operacion
+            (SELECT GROUP_CONCAT(ot.nombre ORDER BY ot.id_tipo_transaccion SEPARATOR " · ") FROM propiedad_ofertas po JOIN tipos_transaccion ot ON ot.id_tipo_transaccion=po.id_tipo_transaccion WHERE po.id_propiedad=p.id_propiedad) AS operacion
      FROM propiedades p
      JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion
      JOIN estados_comerciales ec  ON ec.id_estado_comercial=p.id_estado_comercial
@@ -518,7 +518,7 @@ function person_options(array $people, int $selected = 0): void
                         ?>
 
                         <div class="content-card">
-                            <h2><?= $id ? 'Editar propiedad' : 'Nueva propiedad' ?></h2>
+                            <h2><?= $id ? 'Editar propiedad' : 'Nueva propiedad' ?></h2><?php if ($id): ?><p><a href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= $id ?>" class="text-link">Ver documentación e impuestos guardados</a></p><?php endif; ?>
                             <p class="content-subtitle">
                                 <?= $admin
                                     ? 'Elegí el estado de publicación y el agente responsable.'
@@ -536,7 +536,6 @@ function person_options(array $people, int $selected = 0): void
                                     'titulo'    => 'Título',
                                     'direccion' => 'Dirección',
                                     'localidad' => 'Localidad',
-                                    'precio'    => 'Precio',
                                 ];
                                 foreach ($textFields as $field => $label):
                                 ?>
@@ -586,7 +585,6 @@ function person_options(array $people, int $selected = 0): void
                                 <?php
                                 $selects = [
                                     'tipo'      => ['tipos_propiedad', 'id_tipo_propiedad'],
-                                    'operacion' => ['tipos_transaccion', 'id_tipo_transaccion'],
                                 ];
                                 foreach ($selects as $key => $cfg):
                                 ?>
@@ -605,16 +603,7 @@ function person_options(array $people, int $selected = 0): void
                                     </div>
                                 <?php endforeach; ?>
 
-                                <div class="field">
-                                    <label for="moneda">Moneda</label>
-                                    <select id="moneda" name="moneda">
-                                        <?php foreach (['USD', 'ARS'] as $m): ?>
-                                            <option <?= ($_POST['moneda'] ?? $p['moneda'] ?? 'USD') === $m ? 'selected' : '' ?>>
-                                                <?= $m ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
+
 
                                
                                 <div class="field">
@@ -673,7 +662,9 @@ function person_options(array $people, int $selected = 0): void
                                 <?php endif; ?>
 
                                
-                                <div class="field full">
+                                <?php $offerKind='propiedad'; $offerId=$id; require __DIR__.'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
+<?php require __DIR__.'/sistema/Vistas/Diseno/expediente-form.php'; ?>
+<div class="field full">
                                     <label for="fotos">Agregar fotos (hasta 8, máximo 2 MB cada una)</label>
                                     <input
                                         id="fotos"
@@ -710,7 +701,7 @@ function person_options(array $people, int $selected = 0): void
                                         <th>Precio</th>
                                         <th>Publicación</th>
                                         <th>Estado</th>
-                                        <th>Acción</th>
+                                        <th>Ficha privada</th><th>Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -720,9 +711,9 @@ function person_options(array $people, int $selected = 0): void
                                                 <strong><?= e($p['titulo']) ?></strong><br>
                                                 <small><?= e($p['localidad']) ?></small>
                                             </td>
-                                            <td><?= e($p['moneda'] . ' ' . number_format((float)$p['precio'], 0, ',', '.')) ?></td>
+                                            <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?></div><?php endforeach; ?></td>
                                             <td><?= e($p['verificacion']) ?></td>
-                                            <td><?= e($p['estado']) ?></td>
+                                            <td><?= e($p['estado']) ?></td><td><a class="text-link" href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= (int)$p['id_propiedad'] ?>">Documentación e impuestos</a></td>
                                             <td>
                                                 <?php if (!in_array((int)$p['id_estado_comercial'], [3, 4], true)): ?>
                                                     <a class="text-link" href="?seccion=propiedades&editar=<?= $p['id_propiedad'] ?>">Editar</a>
@@ -772,7 +763,9 @@ function person_options(array $people, int $selected = 0): void
                                 </p>
 
                                 
-                                <?php
+                                <?php $offerKind='solicitud'; $offerId=(int)$r['id_solicitud']; require __DIR__.'/sistema/Vistas/Diseno/ofertas-resumen.php'; ?>
+<?php if ($admin || (int)$r['id_agente']===(int)$user['id']): ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= (int)$r['id_solicitud'] ?>">Revisar documentación e impuestos</a></p><?php endif; ?>
+<?php
                                 $multimedia = query_rows(
                                     'SELECT * FROM solicitud_multimedia WHERE id_solicitud=?',
                                     [$r['id_solicitud']]
@@ -1095,7 +1088,7 @@ function person_options(array $people, int $selected = 0): void
                 $rentals = query_rows(
                     'SELECT a.id_alquiler,
                             p.titulo,
-                            p.moneda,
+                            a.moneda,
                             a.monto_mensual AS monto,
                             a.fecha_inicio AS fecha,
                             a.fecha_fin,
@@ -1136,9 +1129,9 @@ function person_options(array $people, int $selected = 0): void
                                             continue;
                                         }
                                         ?>
-                                        <option value="<?= $p['id_propiedad'] ?>">
-                                            <?= e($p['titulo'] . ' · ' . $p['operacion'] . ' · ' . $p['moneda']) ?>
-                                        </option>
+                                        <?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $offer): ?>
+                                        <option value="<?= (int)$p['id_propiedad'] ?>:<?= (int)$offer['id_tipo_transaccion'] ?>"><?= e($p['titulo'].' · '.$offer['nombre'].' · '.$offer['moneda'].' '.$offer['precio']) ?></option>
+                                        <?php endforeach; ?>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -1152,7 +1145,7 @@ function person_options(array $people, int $selected = 0): void
                             </div>
 
                             <div class="field">
-                                <label for="monto">Importe (moneda de la propiedad)</label>
+                                <label for="monto">Importe final (moneda de la operación elegida)</label>
                                 <input id="monto" name="monto" type="number" min="0.01" step="0.01" required>
                             </div>
 

@@ -27,6 +27,7 @@ if (isset($_SESSION['flash_success'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    try { $_POST=(new OfertaDAO(Database::connection()))->normalize($_POST,true); } catch (RuntimeException $e) { $errorMessage=$e->getMessage(); }
 
     $data = [
         'moneda'      => (string)($_POST['moneda'] ?? 'USD'),
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   
     if (
-        $invalidNumbers
+        $errorMessage !== '' || $invalidNumbers
         || !isset($_POST['declaracion'])
         || !in_array($data['moneda'], ['USD', 'ARS'], true)
         || !in_array($data['tipo'], $allowedTypes, true)
@@ -157,7 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (new SolicitudPropiedadDAO(Database::connection()))->create(
                     (int)$user['id'],
                     $data,
-                    $uploadedFiles
+                    $uploadedFiles,
+                    $_POST
                 );
 
                 $_SESSION['flash_success'] = 'La solicitud se envió correctamente. El equipo revisará la información.';
@@ -244,17 +246,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
 
                      
-                        <div class="field">
-                            <label for="operacion">Operación *</label>
-                            <select id="operacion" name="operacion" required>
-                                <option value="">Seleccionar</option>
-                                <?php foreach ($allowedOperations as $operation): ?>
-                                    <option value="<?= e($operation) ?>" <?= ($_POST['operacion'] ?? '') === $operation ? 'selected' : '' ?>>
-                                        <?= e($operation) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+
 
                         <div class="field full">
                             <label for="titulo">Título de la propiedad *</label>
@@ -306,27 +298,10 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
 
                       
-                        <div class="field">
-                            <label for="moneda">Moneda</label>
-                            <select id="moneda" name="moneda">
-                                <option>USD</option>
-                                <option <?= ($_POST['moneda'] ?? '') === 'ARS' ? 'selected' : '' ?>>ARS</option>
-                            </select>
-                        </div>
 
                  
-                        <div class="field">
-                            <label for="precio">Precio aproximado (opcional)</label>
-                            <input
-                                id="precio"
-                                name="precio"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value="<?= e((string)($_POST['precio'] ?? '')) ?>"
-                                placeholder="250000"
-                            >
-                        </div>
+
+
 
                    
                         <div class="field">
@@ -391,7 +366,9 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
 
                      
-                        <div class="field full">
+                        <?php require dirname(__DIR__).'/sistema/Vistas/Diseno/expediente-form.php'; ?>
+<?php $offerKind='solicitud'; $offerId=0; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
+<div class="field full">
                             <label for="multimedia">Fotos y videos (hasta 8 archivos, 2 MB cada uno)</label>
 
                             <div class="file-drop">
@@ -426,7 +403,8 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
 
                     </div>
-                </form>
+
+</form>
 
 
                

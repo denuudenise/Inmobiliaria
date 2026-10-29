@@ -151,7 +151,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                             <td>
                                                 <?= e(date('d/m/Y', strtotime($rental['fecha_inicio']))) ?><?= $rental['fecha_fin'] ? ' – ' . e(date('d/m/Y', strtotime($rental['fecha_fin']))) : '' ?>
                                             </td>
-                                            <td><?= e(number_format((float)$rental['monto_mensual'], 0, ',', '.')) ?></td>
+                                            <td><?= e($rental['moneda']) ?> <?= e(number_format((float)$rental['monto_mensual'], 0, ',', '.')) ?></td>
                                             <td>
                                                 <span class="status <?= $rental['estado'] === 'Activo' ? '' : 'gray' ?>">
                                                     ● <?= e($rental['estado']) ?>

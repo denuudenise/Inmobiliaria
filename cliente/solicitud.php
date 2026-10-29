@@ -25,6 +25,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    try { $_POST=(new OfertaDAO(Database::connection()))->normalize($_POST,true); } catch (RuntimeException $e) { $error=$e->getMessage(); }
 
   
     if (!in_array((int)$r['id_estado_verificacion'], [2, 4], true)) {
@@ -38,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
         if (
-            !$title
+            $error !== '' || !$title
             || mb_strlen($title) > 200
             || mb_strlen($desc) < 10
             || !is_numeric($price)
@@ -92,6 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
 
+                $offers=new OfertaDAO($db);
+                $offers->save('solicitud',$id,$_POST);
+                if (isset($_POST['ofertas_form'])) {
+                    $selected=$offers->read('solicitud',$id)[0];
+                    execute_sql('UPDATE solicitudes_publicacion SET id_tipo_transaccion=? WHERE id_solicitud=?',[$selected['id_tipo_transaccion'],$id]);
+                }
                 $db->commit();
 
                 flash('Solicitud actualizada y enviada a revisión.');
@@ -120,7 +127,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
     <a class="text-link" href="/Inmobiliaria/cliente/solicitudes.php">← Mis solicitudes</a>
 
-    <h1><?= e($r['titulo']) ?></h1>
+    <h1><?= e($r['titulo']) ?></h1><?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-resumen.php'; ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= $id ?>">Documentación privada e impuestos</a></p>
 
     <?php notice(); ?>
 
@@ -168,33 +175,14 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                     ><?= e((string)($_POST['descripcion'] ?? $r['descripcion'])) ?></textarea>
                 </div>
 
-                <div class="field">
-                    <label for="precio">Precio</label>
-                    <input
-                        id="precio"
-                        name="precio"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value="<?= e((string)($_POST['precio'] ?? $r['precio_estimado'])) ?>"
-                        required
-                    >
-                </div>
 
            
-                <div class="field">
-                    <label for="moneda">Moneda</label>
-                    <select id="moneda" name="moneda">
-                        <?php foreach (['USD', 'ARS'] as $m): ?>
-                            <option <?= ($_POST['moneda'] ?? $r['moneda']) === $m ? 'selected' : '' ?>>
-                                <?= $m ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
 
          
-                <div class="field full">
+
+
+                <?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
+<div class="field full">
                     <label for="fotos">Agregar fotos (JPG, PNG o WEBP, hasta 2 MB cada una)</label>
                     <input
                         id="fotos"

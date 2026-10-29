@@ -63,7 +63,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                   
                     <details class="record">
                         <summary>
-                            <strong><?= e($row['titulo']) ?></strong>
+                            <strong><?= e($row['titulo']) ?><?php if ($section==='propiedades'): ?> <a class="text-link" href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= (int)$row['id_propiedad'] ?>">Ficha privada</a><?php endif; ?></strong>
                             <span class="status blue"><?= e($row['estado']) ?></span>
                         </summary>
 
@@ -108,7 +108,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                    
                     <article class="task-row">
                         <span>
-                            <strong><?= e($row['titulo']) ?></strong>
+                            <strong><?= e($row['titulo']) ?><?php if ($section==='propiedades'): ?> <a class="text-link" href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= (int)$row['id_propiedad'] ?>">Ficha privada</a><?php endif; ?></strong>
                             <small><?= e($row['localidad'] . ' · ' . $row['moneda'] . ' ' . number_format((float)$row['precio'], 0, ',', '.')) ?></small>
                             <small><?= e($row['verificacion'] . ' · ' . $row['estado']) ?></small>
                         </span>

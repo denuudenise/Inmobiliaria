@@ -104,14 +104,14 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
 
          
             <div class="content-card property-summary">
-                <span class="status blue"><?= e($property['operacion'] . ' · ' . $property['tipo']) ?></span>
+                <span class="status blue"><?= e($property['tipo']) ?></span>
 
                 <h1><?= e($property['titulo']) ?></h1>
                 <p><?= e($property['localidad']) ?></p>
 
-                <p class="price">
-                    <?= e($property['moneda'] . ' ' . number_format((float)$property['precio'], 0, ',', '.')) ?><?= $property['operacion'] === 'Venta' ? '' : ' / mes' ?>
-                </p>
+                <div class="offer-summary">
+<?php foreach ((new OfertaDAO(Database::connection()))->read('propiedad',$id) as $offer): ?><p><strong><?= e($offer['nombre']) ?>:</strong> <?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' / mes':'' ?></p><?php endforeach; ?>
+</div>
 
                 <dl class="features">
                     <div>

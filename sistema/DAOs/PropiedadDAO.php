@@ -7,49 +7,24 @@ final class PropiedadDAO
 
     public function findPublished(array $filters = [], int $limit = 40): array
     {
-        $where = [
-            'p.id_estado_verificacion = 3',
-            'p.id_estado_comercial = 1',
-        ];
-        $params = [];
-
-        if (!empty($filters['location'])) {
-            $where[] = '(p.localidad LIKE :location_city OR p.direccion LIKE :location_address OR p.titulo LIKE :location_title)';
-            $params['location_city'] = '%' . trim($filters['location']) . '%';
-            $params['location_address'] = $params['location_city'];
-            $params['location_title'] = $params['location_city'];
+        $where=['p.id_estado_verificacion=3','p.id_estado_comercial=1']; $params=[];
+        if (!empty($filters['location'])) { $where[]='(p.localidad LIKE ? OR p.direccion LIKE ? OR p.titulo LIKE ?)';$value='%'.trim($filters['location']).'%';array_push($params,$value,$value,$value); }
+        if (!empty($filters['type'])) { $where[]='tp.nombre=?';$params[]=$filters['type']; }
+        if (!empty($filters['bedrooms'])) { $where[]='p.dormitorios>=?';$params[]=(int)$filters['bedrooms']; }
+        $offerWhere=['o.id_propiedad=p.id_propiedad'];$offerParams=[];
+        if (!empty($filters['operation'])) { $offerWhere[]='t.nombre=?';$offerParams[]=$filters['operation']; }
+        if (!empty($filters['currency']) && in_array($filters['currency'],['ARS','USD'],true)) { $offerWhere[]='o.moneda=?';$offerParams[]=$filters['currency']; }
+        if (isset($filters['max_price']) && is_numeric($filters['max_price']) && (float)$filters['max_price']>0) { $offerWhere[]='o.precio<=?';$offerParams[]=$filters['max_price']; }
+        $where[]='EXISTS (SELECT 1 FROM propiedad_ofertas o JOIN tipos_transaccion t ON t.id_tipo_transaccion=o.id_tipo_transaccion WHERE '.implode(' AND ',$offerWhere).')';
+        $sql='SELECT p.*,tp.nombre AS tipo,(SELECT url_archivo FROM propiedad_multimedia pm WHERE pm.id_propiedad=p.id_propiedad AND pm.tipo="Imagen" ORDER BY pm.orden,pm.id_multimedia LIMIT 1) AS imagen FROM propiedades p JOIN tipos_propiedad tp ON tp.id_tipo_propiedad=p.id_tipo_propiedad WHERE '.implode(' AND ',$where).' ORDER BY p.fecha_creacion DESC LIMIT '.max(1,min($limit,100));
+        $q=$this->db->prepare($sql);$q->execute([...$params,...$offerParams]);$rows=$q->fetchAll();
+        foreach($rows as &$row){
+            $row['ofertas']=array_values(array_filter((new OfertaDAO($this->db))->read('propiedad',(int)$row['id_propiedad']),static function($o)use($filters){
+                return (empty($filters['operation'])||$o['nombre']===$filters['operation']) && (empty($filters['currency'])||!in_array($filters['currency'],['ARS','USD'],true)||$o['moneda']===$filters['currency']) && (!isset($filters['max_price'])||!is_numeric($filters['max_price'])||(float)$filters['max_price']<=0||(float)$o['precio']<=(float)$filters['max_price']);
+            }));
+            $first=$row['ofertas'][0];$row['precio']=$first['precio'];$row['moneda']=$first['moneda'];$row['operacion']=implode(' · ',array_column($row['ofertas'],'nombre'));
         }
-        if (!empty($filters['type'])) {
-            $where[] = 'tp.nombre = :type';
-            $params['type'] = $filters['type'];
-        }
-        if (!empty($filters['operation'])) {
-            $where[] = 'tt.nombre = :operation';
-            $params['operation'] = $filters['operation'];
-        }
-
-        if (!empty($filters['currency']) && in_array($filters['currency'], ['USD','ARS'], true)) {
-            $where[] = 'p.moneda = :currency'; $params['currency'] = $filters['currency'];
-        }
-        if (isset($filters['max_price']) && is_numeric($filters['max_price']) && (float)$filters['max_price'] > 0) {
-            $where[] = 'p.precio <= :max_price'; $params['max_price'] = $filters['max_price'];
-        }
-        if (!empty($filters['bedrooms'])) { $where[] = 'p.dormitorios >= :bedrooms'; $params['bedrooms'] = (int)$filters['bedrooms']; }
-        $limit = max(1, min($limit, 100));
-        $sql = 'SELECT p.id_propiedad, p.titulo, p.direccion, p.localidad, p.precio,
-                       p.moneda, p.descripcion, p.superficie_total_m2, p.ambientes,
-                       p.dormitorios, p.banos, tp.nombre AS tipo, tt.nombre AS operacion,
-                       (SELECT pm.url_archivo FROM propiedad_multimedia pm
-                        WHERE pm.id_propiedad = p.id_propiedad AND pm.tipo = "Imagen"
-                        ORDER BY pm.orden, pm.id_multimedia LIMIT 1) AS imagen
-                FROM propiedades p
-                INNER JOIN tipos_propiedad tp ON tp.id_tipo_propiedad = p.id_tipo_propiedad
-                INNER JOIN tipos_transaccion tt ON tt.id_tipo_transaccion = p.id_tipo_transaccion
-                WHERE ' . implode(' AND ', $where) . '
-                ORDER BY p.fecha_creacion DESC LIMIT ' . $limit;
-        $statement = $this->db->prepare($sql);
-        $statement->execute($params);
-        return $statement->fetchAll();
+        return $rows;
     }
 
     public function findById(int $propertyId): ?array
@@ -99,7 +74,7 @@ final class PropiedadDAO
     public function findRentalsForClient(int $clientId): array
     {
         $statement = $this->db->prepare(
-            'SELECT p.titulo, p.localidad, a.monto_mensual, a.fecha_inicio, a.fecha_fin,
+            'SELECT p.titulo, p.localidad, a.monto_mensual, a.moneda, a.fecha_inicio, a.fecha_fin,
                     a.estado, u.nombre AS agente_nombre, u.apellido AS agente_apellido
              FROM alquileres a
              INNER JOIN propiedades p ON p.id_propiedad = a.id_propiedad

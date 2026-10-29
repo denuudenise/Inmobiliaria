@@ -13,6 +13,8 @@ try {
     $sql=file_get_contents(dirname(__DIR__).'/inmobiliaria (5).sql');
     if (preg_match('/^\s*(?:USE\s|CREATE\s+DATABASE|DROP\s+DATABASE)/mi',$sql)) throw new RuntimeException('El SQL debe contener únicamente tablas de la base temporal.');
     $db->exec($sql);
+    $db->exec(file_get_contents(dirname(__DIR__).'/base_datos/migraciones/004_documentacion_impuestos.sql'));
+    $db->exec(file_get_contents(dirname(__DIR__).'/base_datos/migraciones/005_ofertas_caracteristicas.sql'));
     $users=new UsuarioDAO($db); $dao=new GestionDAO($db);
     $client=$users->createClient('Prueba','Cliente','99999001','','prueba-modelo@example.test',password_hash('Prueba123!',PASSWORD_DEFAULT));
     check(count(query_rows('SELECT * FROM clientes WHERE id_cliente=?',[$client]))===1,'Registro crea ficha de cliente');
@@ -20,7 +22,7 @@ try {
     check(!query_rows('SELECT * FROM clientes WHERE id_cliente=?',[$agent]),'Agente no genera ficha de cliente');
     execute_sql('UPDATE clientes SET id_agente_asignado=? WHERE id_cliente=?',[$agent,$client]);
     $panel=file_get_contents(dirname(__DIR__).'/agente.php');
-    preg_match('/\$people=query_rows\(\x27(.*?)\x27,\[/s',$panel,$match);
+    preg_match('/\$people\s*=\s*query_rows\(\s*\x27(.*?)\x27\s*,\s*\[/s',$panel,$match);
     $people=query_rows($match[1],['%','%','%',0,0,$agent,$agent,$agent,$agent]);
     check(in_array($client,array_map('intval',array_column($people,'id_usuario')),true),'Panel incluye cliente asignado sin actividad previa');
     $admin=['id'=>(int)$db->query('SELECT id_usuario FROM usuarios WHERE id_rol=1 LIMIT 1')->fetchColumn(),'role'=>'Administrador'];
