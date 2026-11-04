@@ -5,6 +5,7 @@ $id = (int)($_GET['id'] ?? 0);
 $dao = new PropiedadDAO(Database::connection());
 
 $property = $dao->findById($id);
+$propertyOffers = $property ? (new OfertaDAO(Database::connection()))->read('propiedad',$id) : [];
 $error = '';
 
 if (!$property) {
@@ -16,25 +17,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = require_client();
     verify_csrf();
 
-    $message = trim($_POST['mensaje'] ?? '');
-
     if (!$property) {
         $error = 'Esta propiedad ya no está disponible.';
 
-    } elseif (mb_strlen($message) < 10 || mb_strlen($message) > 3000) {
-        $error = 'Escribí una consulta de entre 10 y 3000 caracteres.';
+    } elseif (($_POST['accion'] ?? '') === 'enviar_oferta') {
+        try {
+            (new SeguimientoDAO(Database::connection()))->submitOffer($user,$id,(int)($_POST['operacion']??0),$_POST);
+            flash('Tu oferta fue enviada. El equipo la revisará y podrás ver el estado en tu panel.');
+            redirect('/Inmobiliaria/cliente/ofertas.php');
+        } catch (RuntimeException $exception) {
+            $error=$exception instanceof PDOException?'No se pudo enviar la oferta. Intentá nuevamente.':$exception->getMessage();
+        }
 
     } else {
-        execute_sql(
-            "INSERT INTO contactos (id_cliente, id_agente, id_propiedad, tipo, descripcion)
-             SELECT ?, p.id_agente_creador, p.id_propiedad, 'Consulta', ?
-             FROM propiedades p
-             WHERE p.id_propiedad=?",
-            [$user['id'], $message, $id]
-        );
+        $message = trim((string)($_POST['mensaje'] ?? ''));
 
-        flash('Consulta enviada. Podés ver la respuesta en Mis consultas.');
-        redirect('/Inmobiliaria/propiedad.php?id=' . $id . '#contacto');
+        if (mb_strlen($message) < 10 || mb_strlen($message) > 3000) {
+            $error = 'Escribí una consulta de entre 10 y 3000 caracteres.';
+
+        } else {
+            execute_sql(
+                "INSERT INTO contactos (id_cliente, id_agente, id_propiedad, tipo, descripcion)
+                 SELECT ?, p.id_agente_creador, p.id_propiedad, 'Consulta', ?
+                 FROM propiedades p
+                 WHERE p.id_propiedad=?",
+                [$user['id'], $message, $id]
+            );
+
+            flash('Consulta enviada. Podés ver la respuesta en Mis consultas.');
+            redirect('/Inmobiliaria/propiedad.php?id=' . $id . '#contacto');
+        }
     }
 }
 
@@ -206,6 +218,21 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <?php endif; ?>
 
                 <?php if (current_user() && current_user()['role'] === 'Cliente'): ?>
+
+                    <details class="record offer-submit-card">
+                        <summary><strong>Hacer una oferta</strong></summary>
+                        <div class="record-body">
+                            <p class="help-text">La oferta queda pendiente de revisión. No reserva la propiedad automáticamente.</p>
+                            <?php if ($propertyOffers): ?><form method="post" class="form-grid">
+                                <?php csrf_field(); ?><input type="hidden" name="accion" value="enviar_oferta">
+                                <div class="field"><label for="oferta-operacion">Operación</label><select id="oferta-operacion" name="operacion" required><?php foreach($propertyOffers as $offer): ?><option value="<?= (int)$offer['id_tipo_transaccion'] ?>"><?= e($offer['nombre'].' · '.$offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?></option><?php endforeach; ?></select></div>
+                                <div class="field"><label for="oferta-monto">Monto de tu oferta</label><input id="oferta-monto" name="monto" type="number" min="0.01" max="9999999999" step="0.01" required><small>Se usará la moneda de la operación seleccionada.</small></div>
+                                <div class="field"><label for="oferta-vencimiento">Válida hasta (opcional)</label><input id="oferta-vencimiento" name="fecha_vencimiento" type="date" min="<?= e(date('Y-m-d')) ?>"></div>
+                                <div class="field full"><label for="oferta-observaciones">Condiciones o comentario</label><textarea id="oferta-observaciones" name="observaciones" maxlength="3000"></textarea></div>
+                                <div class="field full"><button class="btn">Enviar oferta</button></div>
+                            </form><?php else: ?><p>No hay operaciones disponibles para ofertar.</p><?php endif; ?>
+                        </div>
+                    </details>
 
                     <!-- Cliente logueado: formulario de consulta -->
                     <form method="post" class="modal-form">

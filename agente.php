@@ -15,6 +15,7 @@ $sections = [
     'propiedades' => 'Propiedades',
     'solicitudes' => 'Solicitudes',
     'consultas'   => 'Consultas',
+    'seguimiento' => 'Seguimiento y ofertas',
     'clientes'    => 'Clientes',
     'operaciones' => 'Ventas y alquileres',
     'reportes'    => 'Reportes',
@@ -33,6 +34,7 @@ if (!isset($sections[$section])) {
 
 $db = Database::connection();
 $dao = new GestionDAO($db);
+$seguimientoDAO = new SeguimientoDAO($db);
 $error = '';
 
 
@@ -170,6 +172,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
         
+        } elseif ($action === 'interaccion') {
+            $seguimientoDAO->recordInteraction($user, $_POST);
+
+        } elseif ($action === 'programar_visita') {
+            $seguimientoDAO->scheduleVisit($user, $_POST);
+
+        } elseif ($action === 'crear_tarea') {
+            $seguimientoDAO->createTask($user, $_POST);
+
+        } elseif ($action === 'completar_tarea') {
+            $seguimientoDAO->completeTask($user, (int)($_POST['id'] ?? 0));
+
+        } elseif ($action === 'revisar_oferta') {
+            $seguimientoDAO->reviewOffer($user, (int)($_POST['id'] ?? 0), (string)($_POST['estado'] ?? ''), trim((string)($_POST['observaciones'] ?? '')));
+
+        } elseif ($action === 'crear_reserva') {
+            $seguimientoDAO->createReservation($user, $_POST);
+
         } elseif ($action === 'usuario' && $admin) {
             $id     = (int)($_POST['id'] ?? 0);
             $role   = (int)($_POST['rol'] ?? 0);
@@ -306,6 +326,9 @@ $consults = query_rows(
      ORDER BY c.estado="Pendiente" DESC, c.fecha DESC',
     [(int)$admin, $user['id'], $like, $like]
 );
+
+$crmData = $section === 'seguimiento' ? $seguimientoDAO->panelData($user, $admin) : [];
+$crmClients = $section === 'seguimiento' ? $seguimientoDAO->clientsFor($user, $admin) : [];
 
 $dashboardClients = query_rows(
     'SELECT DISTINCT u.id_usuario,u.nombre,u.apellido,u.email,u.telefono,
@@ -627,6 +650,8 @@ function person_options(array $people, int $selected = 0): void
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <div class="field full"><label for="motivo_cambio">Motivo del cambio de estado</label><input id="motivo_cambio" name="motivo_cambio" maxlength="500" placeholder="Obligatorio cuando cambiás el estado"></div>
+                                <div class="field full"><label for="motivo_precio">Motivo del cambio de precio (opcional)</label><input id="motivo_precio" name="motivo_precio" maxlength="500"></div>
 
                                 
                                 <?php if ($admin): ?>
@@ -897,6 +922,9 @@ function person_options(array $people, int $selected = 0): void
             <?php /* ================================================
                    | CLIENTES / USUARIOS
                    ================================================ */ ?>
+            <?php elseif ($section === 'seguimiento'): ?>
+                <?php require __DIR__ . '/sistema/Vistas/Diseno/seguimiento-panel.php'; ?>
+
             <?php elseif ($section === 'clientes' || $section === 'usuarios'): ?>
 
                 <?php
@@ -1088,7 +1116,7 @@ function person_options(array $people, int $selected = 0): void
                 $rentals = query_rows(
                     'SELECT a.id_alquiler,
                             p.titulo,
-                            a.moneda,
+                            COALESCE((SELECT po.moneda FROM propiedad_ofertas po WHERE po.id_propiedad=a.id_propiedad AND po.id_tipo_transaccion IN (2,3) ORDER BY po.id_tipo_transaccion LIMIT 1),p.moneda) AS moneda,
                             a.monto_mensual AS monto,
                             a.fecha_inicio AS fecha,
                             a.fecha_fin,

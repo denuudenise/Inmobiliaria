@@ -15,6 +15,7 @@ $sections = [
     'propiedades' => 'Propiedades',
     'solicitudes' => 'Solicitudes',
     'consultas'   => 'Consultas',
+    'seguimiento' => 'Seguimiento y ofertas',
     'clientes'    => 'Clientes',
     'operaciones' => 'Ventas y alquileres',
     'reportes'    => 'Reportes',
@@ -22,6 +23,7 @@ $sections = [
 
 if ($admin) {
     $sections['usuarios'] = 'Usuarios y agentes';
+    $sections['auditoria'] = 'Auditoría';
 }
 
 $sections['perfil'] = 'Mi perfil';
@@ -33,6 +35,7 @@ if (!isset($sections[$section])) {
 
 $db = Database::connection();
 $dao = new GestionDAO($db);
+$seguimientoDAO = new SeguimientoDAO($db);
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -169,6 +172,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
         // --- Cambiar rol / estado de un usuario (solo administrador) ---
+        } elseif ($action === 'interaccion') {
+            $seguimientoDAO->recordInteraction($user, $_POST);
+
+        } elseif ($action === 'programar_visita') {
+            $seguimientoDAO->scheduleVisit($user, $_POST);
+
+        } elseif ($action === 'crear_tarea') {
+            $seguimientoDAO->createTask($user, $_POST);
+
+        } elseif ($action === 'completar_tarea') {
+            $seguimientoDAO->completeTask($user, (int)($_POST['id'] ?? 0));
+
+        } elseif ($action === 'revisar_oferta') {
+            $seguimientoDAO->reviewOffer($user, (int)($_POST['id'] ?? 0), (string)($_POST['estado'] ?? ''), trim((string)($_POST['observaciones'] ?? '')));
+
+        } elseif ($action === 'crear_reserva') {
+            $seguimientoDAO->createReservation($user, $_POST);
+
+        } elseif ($action === 'actualizar_reserva' && $admin) {
+            $seguimientoDAO->updateReservation($user, (int)($_POST['id'] ?? 0), (string)($_POST['reserva_accion'] ?? ''), (string)($_POST['estado_pago'] ?? 'Pendiente'));
+
         } elseif ($action === 'usuario' && $admin) {
             $id     = (int)($_POST['id'] ?? 0);
             $role   = (int)($_POST['rol'] ?? 0);
@@ -307,6 +331,13 @@ $consults = query_rows(
      ORDER BY c.estado="Pendiente" DESC, c.fecha DESC',
     [(int)$admin, $user['id'], $like, $like]
 );
+
+$crmData = $section === 'seguimiento' ? $seguimientoDAO->panelData($user, $admin) : [];
+$crmClients = $section === 'seguimiento' ? $seguimientoDAO->clientsFor($user, $admin) : [];
+$auditEvents = $section === 'auditoria' ? (new AuditoriaDAO($db))->auditLog() : [];
+$stateHistory = $section === 'auditoria' ? query_rows('SELECT h.*,p.titulo,u.nombre,u.apellido,ea.nombre AS anterior,en.nombre AS nuevo FROM historial_estados h JOIN propiedades p ON p.id_propiedad=h.id_propiedad JOIN usuarios u ON u.id_usuario=h.id_usuario JOIN estados_comerciales ea ON ea.id_estado_comercial=h.estado_anterior JOIN estados_comerciales en ON en.id_estado_comercial=h.estado_nuevo ORDER BY h.fecha DESC LIMIT 50') : [];
+$priceHistory = $section === 'auditoria' ? query_rows('SELECT h.*,p.titulo,u.nombre,u.apellido,t.nombre AS operacion FROM historial_precios h JOIN propiedades p ON p.id_propiedad=h.id_propiedad JOIN usuarios u ON u.id_usuario=h.id_usuario JOIN tipos_transaccion t ON t.id_tipo_transaccion=h.id_tipo_transaccion ORDER BY h.fecha DESC LIMIT 50') : [];
+$assignmentHistory = $section === 'auditoria' ? query_rows('SELECT h.*,u.nombre AS autor_nombre,u.apellido AS autor_apellido,ua.nombre AS anterior_nombre,ua.apellido AS anterior_apellido,un.nombre AS nuevo_nombre,un.apellido AS nuevo_apellido FROM historial_asignaciones h JOIN usuarios u ON u.id_usuario=h.id_usuario_cambio LEFT JOIN usuarios ua ON ua.id_usuario=h.agente_anterior LEFT JOIN usuarios un ON un.id_usuario=h.agente_nuevo ORDER BY h.fecha DESC LIMIT 50') : [];
 
 $pageTitle = $sections[$section];
 require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
@@ -573,6 +604,8 @@ function person_options(array $people, int $selected = 0): void
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <div class="field full"><label for="motivo_cambio">Motivo del cambio de estado</label><input id="motivo_cambio" name="motivo_cambio" maxlength="500" placeholder="Obligatorio cuando cambiás el estado"></div>
+                                <div class="field full"><label for="motivo_precio">Motivo del cambio de precio (opcional)</label><input id="motivo_precio" name="motivo_precio" maxlength="500"></div>
 
                                 
                                 <?php if ($admin): ?>
@@ -843,6 +876,25 @@ function person_options(array $people, int $selected = 0): void
             <?php /* ================================================
                    | CLIENTES / USUARIOS
                    ================================================ */ ?>
+            <?php elseif ($section === 'seguimiento'): ?>
+                <?php require __DIR__ . '/sistema/Vistas/Diseno/seguimiento-panel.php'; ?>
+
+            <?php elseif ($section === 'auditoria' && $admin): ?>
+                <div class="content-card">
+                    <h2>Registro de auditoría</h2>
+                    <p class="content-subtitle">Acciones y cambios recientes con usuario, fecha y detalle.</p>
+                    <?php if ($auditEvents): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Elemento</th><th>Detalle</th><th>Cambios registrados</th></tr></thead><tbody>
+                        <?php foreach ($auditEvents as $event): $eventChanges=query_rows('SELECT campo,valor_anterior,valor_nuevo,motivo FROM auditoria_cambios WHERE id_evento=? ORDER BY id_cambio',[(int)$event['id_evento']]); ?>
+                            <tr><td><?= e(date('d/m/Y H:i',strtotime($event['fecha']))) ?></td><td><?= e($event['nombre'].' '.$event['apellido']) ?></td><td><?= e($event['accion']) ?></td><td><?= e($event['entidad'].' #'.$event['id_registro']) ?></td><td><?= e($event['detalle']??'') ?></td><td><?php foreach($eventChanges as $change): ?><div><strong><?= e($change['campo']) ?>:</strong> <?= e((string)$change['valor_anterior']) ?> → <?= e((string)$change['valor_nuevo']) ?><?php if($change['motivo']): ?><small> · <?= e($change['motivo']) ?></small><?php endif; ?></div><?php endforeach; ?></td></tr>
+                        <?php endforeach; ?>
+                    </tbody></table></div><?php else: ?><p>No hay eventos registrados todavía.</p><?php endif; ?>
+                </div>
+                <div class="content-card"><h2>Historial de estados y precios</h2>
+                    <h3>Estados de propiedades</h3><?php if($stateHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Usuario</th><th>Cambio</th><th>Motivo</th></tr></thead><tbody><?php foreach($stateHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['titulo']) ?></td><td><?= e($h['nombre'].' '.$h['apellido']) ?></td><td><?= e($h['anterior'].' → '.$h['nuevo']) ?></td><td><?= e($h['motivo']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de estado registrados.</p><?php endif; ?>
+                    <h3>Precios</h3><?php if($priceHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Operación</th><th>Precio anterior</th><th>Precio nuevo</th><th>Usuario / motivo</th></tr></thead><tbody><?php foreach($priceHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['titulo']) ?></td><td><?= e($h['operacion']) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_anterior'],2,',','.')) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_nuevo'],2,',','.')) ?></td><td><?= e($h['nombre'].' '.$h['apellido']) ?><?= $h['motivo']?' · '.e($h['motivo']):'' ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de precio registrados.</p><?php endif; ?>
+                    <h3>Asignaciones</h3><?php if($assignmentHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Elemento</th><th>Agente anterior</th><th>Agente nuevo</th><th>Registrado por</th><th>Motivo</th></tr></thead><tbody><?php foreach($assignmentHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['tipo_entidad'].' #'.$h['id_entidad']) ?></td><td><?= e(trim(($h['anterior_nombre']??'').' '.($h['anterior_apellido']??''))?:'Sin asignar') ?></td><td><?= e(trim(($h['nuevo_nombre']??'').' '.($h['nuevo_apellido']??''))?:'Sin asignar') ?></td><td><?= e($h['autor_nombre'].' '.$h['autor_apellido']) ?></td><td><?= e($h['motivo']??'') ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin reasignaciones registradas.</p><?php endif; ?>
+                </div>
+
             <?php elseif ($section === 'clientes' || $section === 'usuarios'): ?>
 
                 <?php
@@ -1019,7 +1071,7 @@ function person_options(array $people, int $selected = 0): void
                 $rentals = query_rows(
                     'SELECT a.id_alquiler,
                             p.titulo,
-                            a.moneda,
+                            COALESCE((SELECT po.moneda FROM propiedad_ofertas po WHERE po.id_propiedad=a.id_propiedad AND po.id_tipo_transaccion IN (2,3) ORDER BY po.id_tipo_transaccion LIMIT 1),p.moneda) AS moneda,
                             a.monto_mensual AS monto,
                             a.fecha_inicio AS fecha,
                             a.fecha_fin,

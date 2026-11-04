@@ -17,8 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $surname  = trim((string)($_POST['apellido'] ?? ''));
     $dni      = trim((string)($_POST['dni'] ?? ''));
     $phone    = trim((string)($_POST['telefono'] ?? ''));
+    $address  = trim((string)($_POST['direccion'] ?? ''));
+    $city     = trim((string)($_POST['localidad'] ?? ''));
+    $birthDate= trim((string)($_POST['fecha_nacimiento'] ?? ''));
+    $gender   = trim((string)($_POST['genero'] ?? ''));
     $email    = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
+    $birthDateValue=DateTime::createFromFormat('!Y-m-d',$birthDate);
+    $validGenders=['Femenino','Masculino','No binario','Otro','Prefiero no decirlo'];
 
   
     if (
@@ -29,8 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         || strlen($surname) > 100
         || strlen($email) > 150
         || strlen($phone) > 30
+        || $address === '' || mb_strlen($address) > 255
+        || $city === '' || mb_strlen($city) > 100
+        || !$birthDateValue || $birthDateValue->format('Y-m-d') !== $birthDate
+        || $birthDate > date('Y-m-d')
+        || !in_array($gender,$validGenders,true)
     ) {
-        $errorMessage = 'Completá nombre, apellido y un DNI válido de 7 a 10 dígitos.';
+        $errorMessage = 'Completá los datos personales, la dirección, la localidad, la fecha de nacimiento y el género. El DNI debe tener entre 7 y 10 dígitos.';
 
     } elseif ($password !== (string)($_POST['password_confirm'] ?? '')) {
         $errorMessage = 'Las contraseñas no coinciden.';
@@ -52,7 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dni,
                 $phone,
                 $email,
-                password_hash($password, PASSWORD_DEFAULT)
+                password_hash($password, PASSWORD_DEFAULT),
+                $address,
+                $city,
+                $birthDate,
+                $gender
             );
 
             $user = $dao->findByEmail($email);
@@ -146,6 +161,31 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     name="telefono"
                     value="<?= e((string)($_POST['telefono'] ?? '')) ?>"
                 >
+            </div>
+
+            <div class="field">
+                <label for="direccion">Dirección *</label>
+                <input id="direccion" name="direccion" maxlength="255" value="<?= e((string)($_POST['direccion'] ?? '')) ?>" autocomplete="street-address" required>
+            </div>
+
+            <div class="field">
+                <label for="localidad">Localidad *</label>
+                <input id="localidad" name="localidad" maxlength="100" value="<?= e((string)($_POST['localidad'] ?? '')) ?>" autocomplete="address-level2" required>
+            </div>
+
+            <div class="field">
+                <label for="fecha_nacimiento">Fecha de nacimiento *</label>
+                <input id="fecha_nacimiento" name="fecha_nacimiento" type="date" max="<?= e(date('Y-m-d')) ?>" value="<?= e((string)($_POST['fecha_nacimiento'] ?? '')) ?>" autocomplete="bday" required>
+            </div>
+
+            <div class="field">
+                <label for="genero">Género *</label>
+                <select id="genero" name="genero" required>
+                    <option value="">Seleccioná una opción</option>
+                    <?php foreach (['Femenino','Masculino','No binario','Otro','Prefiero no decirlo'] as $genderOption): ?>
+                        <option value="<?= e($genderOption) ?>" <?= (($_POST['genero'] ?? '') === $genderOption) ? 'selected' : '' ?>><?= e($genderOption) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div class="field">

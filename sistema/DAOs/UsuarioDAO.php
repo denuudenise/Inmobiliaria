@@ -44,12 +44,12 @@ final class UsuarioDAO
         ]);
     }
 
-    public function createClient(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash): int
+    public function createClient(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash, string $address = '', string $city = '', ?string $birthDate = null, string $gender = ''): int
     {
-        return $this->createUser($name,$surname,$dni,$phone,$email,$passwordHash,3);
+        return $this->createUser($name,$surname,$dni,$phone,$email,$passwordHash,3,$address,$city,$birthDate,$gender);
     }
 
-    public function createUser(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash, int $role): int
+    public function createUser(string $name, string $surname, string $dni, string $phone, string $email, string $passwordHash, int $role, string $address = '', string $city = '', ?string $birthDate = null, string $gender = ''): int
     {
         if (!in_array($role,[1,2,3],true)) throw new RuntimeException('Rol inválido.');
         $ownsTransaction=!$this->db->inTransaction();
@@ -62,8 +62,8 @@ final class UsuarioDAO
             throw new RuntimeException('No está configurado el rol solicitado.');
         }
         $statement = $this->db->prepare(
-            'INSERT INTO usuarios (nombre, apellido, dni, telefono, email, password_hash, id_rol, activo)
-             VALUES (:nombre, :apellido, :dni, :telefono, :email, :password, :rol, 1)'
+            'INSERT INTO usuarios (nombre, apellido, dni, telefono, email, password_hash, id_rol, activo, direccion, localidad, fecha_nacimiento, genero)
+             VALUES (:nombre, :apellido, :dni, :telefono, :email, :password, :rol, 1, :direccion, :localidad, :fecha_nacimiento, :genero)'
         );
         $statement->execute([
             'nombre' => trim($name),
@@ -73,6 +73,10 @@ final class UsuarioDAO
             'email' => mb_strtolower(trim($email)),
             'password' => $passwordHash,
             'rol' => $role,
+            'direccion' => trim($address),
+            'localidad' => trim($city),
+            'fecha_nacimiento' => $birthDate ?: null,
+            'genero' => trim($gender),
         ]);
         $id=(int)$this->db->lastInsertId();
         if ($role===3) (new ModeloCompartidoDAO($this->db))->client($id);

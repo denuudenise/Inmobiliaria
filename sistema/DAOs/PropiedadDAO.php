@@ -74,7 +74,9 @@ final class PropiedadDAO
     public function findRentalsForClient(int $clientId): array
     {
         $statement = $this->db->prepare(
-            'SELECT p.titulo, p.localidad, a.monto_mensual, a.moneda, a.fecha_inicio, a.fecha_fin,
+            'SELECT p.titulo, p.localidad, a.monto_mensual,
+                    COALESCE((SELECT po.moneda FROM propiedad_ofertas po WHERE po.id_propiedad=a.id_propiedad AND po.id_tipo_transaccion IN (2,3) ORDER BY po.id_tipo_transaccion LIMIT 1),p.moneda) AS moneda,
+                    a.fecha_inicio, a.fecha_fin,
                     a.estado, u.nombre AS agente_nombre, u.apellido AS agente_apellido
              FROM alquileres a
              INNER JOIN propiedades p ON p.id_propiedad = a.id_propiedad
