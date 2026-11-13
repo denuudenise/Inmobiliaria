@@ -415,53 +415,267 @@ function person_options(array $people, int $selected = 0): void
 
 
             <?php /* ================================================
-                   | RESUMEN
+                   | RESUMEN (Panel Administrador unificado)
                    ================================================ */ ?>
             <?php if ($section === 'resumen'): ?>
 
-                <div class="mini-stat-grid">
-                    <a class="mini-stat" href="?seccion=propiedades">
-                        <strong><?= count($props) ?></strong>
-                        <span>Propiedades a tu cargo</span>
-                    </a>
+                <?php
+                $totalClientes = count($clients);
+                $totalSolicitudes = count($requests);
+                $ventasTotales = (int)(query_rows('SELECT COUNT(*) AS c FROM propiedades_cerradas')[0]['c'] ?? 0);
+                $alquileresActivos = (int)(query_rows("SELECT COUNT(*) AS c FROM alquileres WHERE estado = 'Activo'")[0]['c'] ?? 0);
 
-                    <a class="mini-stat" href="?seccion=solicitudes">
-                        <strong><?= count(array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 2)) ?></strong>
-                        <span>Solicitudes por revisar</span>
-                    </a>
+                $propPorTipo = query_rows('
+                    SELECT tp.nombre, COUNT(p.id_propiedad) AS cantidad
+                    FROM tipos_propiedad tp
+                    LEFT JOIN propiedades p ON p.id_tipo_propiedad = tp.id_tipo_propiedad
+                    GROUP BY tp.id_tipo_propiedad, tp.nombre
+                    ORDER BY cantidad DESC
+                ');
 
-                    <a class="mini-stat" href="?seccion=consultas">
-                        <strong><?= count(array_filter($consults, fn($r) => $r['estado'] === 'Pendiente')) ?></strong>
-                        <span>Consultas sin responder</span>
-                    </a>
-                </div>
+                $solPendientes = count(array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 2));
+                $solAprobadas  = count(array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 3));
+                $solRechazadas = count(array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 4));
 
-                <div class="content-card">
-                    <h2>Próximas tareas</h2>
-                    <p class="content-subtitle">Atendé lo pendiente y después seguí con el catálogo.</p>
+                $propPublicadas = count(array_filter($props, fn($p) => (int)$p['id_estado_verificacion'] === 3 && (int)$p['id_estado_comercial'] === 1));
+                $propEnRevision = count(array_filter($props, fn($p) => (int)$p['id_estado_verificacion'] === 2));
+                $propRechazadas = count(array_filter($props, fn($p) => (int)$p['id_estado_verificacion'] === 4));
 
-                    <?php
-                    $pending = array_filter($requests, fn($r) => (int)$r['id_estado_verificacion'] === 2);
+                $actividadReciente = query_rows('
+                    SELECT a.fecha, a.accion, a.entidad, a.id_registro, a.detalle, u.nombre, u.apellido, r.nombre AS rol
+                    FROM auditoria a
+                    JOIN usuarios u ON u.id_usuario = a.id_usuario
+                    JOIN roles r ON r.id_rol = u.id_rol
+                    ORDER BY a.fecha DESC
+                    LIMIT 5
+                ');
+                $totalP = max(1, count($props));
+                ?>
 
-                    foreach (array_slice($pending, 0, 4) as $r):
-                    ?>
-                        <a class="task-row" href="?seccion=solicitudes#solicitud-<?= $r['id_solicitud'] ?>">
-                            <span>
-                                <strong><?= e($r['titulo']) ?></strong>
-                                <small><?= e($r['cliente'] . ' ' . $r['apellido']) ?></small>
-                            </span>
-                            <span class="status amber">Revisar →</span>
-                        </a>
-                    <?php endforeach; ?>
+                <div class="agent-overview">
 
-                    <?php if (!$pending): ?>
-                        <p>No hay solicitudes pendientes. Podés revisar las consultas de tus clientes.</p>
-                    <?php endif; ?>
-
-                    <div class="actions">
-                        <a class="btn" href="?seccion=propiedades&editar=0">Nueva propiedad</a>
-                        <a class="btn btn-outline" href="?seccion=consultas">Atender consultas</a>
+                    <!-- Cabecera -->
+                    <div class="agent-welcome">
+                        <div>
+                            <h2>¡Bienvenido, Administrador!</h2>
+                            <p>Aquí tienes un resumen general del sistema y la actividad reciente.</p>
+                        </div>
+                        <span class="status blue"><?= date('d \d\e F \d\e Y') ?></span>
                     </div>
+
+                    <!-- Fila 1: KPIs Principales -->
+                    <div class="agent-kpis" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                        <a class="agent-kpi" href="?seccion=clientes">
+                            <div class="kpi-icon blue">👥</div>
+                            <div>
+                                <small>Clientes registrados</small>
+                                <strong><?= $totalClientes ?></strong>
+                            </div>
+                        </a>
+
+                        <a class="agent-kpi" href="?seccion=solicitudes">
+                            <div class="kpi-icon amber">📄</div>
+                            <div>
+                                <small>Solicitudes de propiedades</small>
+                                <strong><?= $totalSolicitudes ?></strong>
+                            </div>
+                        </a>
+
+                        <a class="agent-kpi" href="?seccion=operaciones">
+                            <div class="kpi-icon green">💲</div>
+                            <div>
+                                <small>Ventas realizadas</small>
+                                <strong><?= $ventasTotales ?></strong>
+                            </div>
+                        </a>
+
+                        <a class="agent-kpi" href="?seccion=operaciones">
+                            <div class="kpi-icon blue">🏠</div>
+                            <div>
+                                <small>Alquileres activos</small>
+                                <strong><?= $alquileresActivos ?></strong>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Fila 2: Propiedades por tipo + Agentes y Solicitudes -->
+                    <div class="agent-overview-grid" style="grid-template-columns: 1fr 1fr;">
+                        
+                        <div class="content-card">
+                            <div class="agent-card-heading">
+                                <div>
+                                    <h2>Propiedades por tipo</h2>
+                                    <p>Distribución del catálogo actual</p>
+                                </div>
+                            </div>
+                            <div class="agent-chart-layout">
+                                <div class="agent-donut" style="background: conic-gradient(#123b57 0% 45%, #317a9e 45% 75%, #4f94ad 75% 90%, #71808a 90% 100%);">
+                                    <div>
+                                        <strong><?= count($props) ?></strong>
+                                        <small>Total</small>
+                                    </div>
+                                </div>
+                                <ul class="agent-legend">
+                                    <?php foreach ($propPorTipo as $pt): 
+                                        $pct = round(((int)$pt['cantidad'] / $totalP) * 100);
+                                    ?>
+                                        <li>
+                                            <i style="background: var(--blue);"></i>
+                                            <span><?= e($pt['nombre']) ?></span>
+                                            <strong><?= (int)$pt['cantidad'] ?> <small>(<?= $pct ?>%)</small></strong>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-card">
+                            <div class="agent-card-heading">
+                                <div>
+                                    <h2>Agentes y Solicitudes</h2>
+                                    <p>Estado operativo del equipo</p>
+                                </div>
+                                <a class="text-link" href="?seccion=usuarios">Ver agentes →</a>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                                <div style="background: #f8faf9; padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+                                    <small style="color: var(--muted); font-weight: 600;">AGENTES ACTIVOS</small>
+                                    <strong style="display: block; font-size: 24px; color: var(--navy); margin-top: 6px; font-family: 'Playfair Display', serif;"><?= count($agents) ?></strong>
+                                    <a class="text-link" href="?seccion=usuarios" style="font-size: 11px; display: inline-block; margin-top: 8px;">Gestionar equipo →</a>
+                                </div>
+
+                                <div style="background: #f8faf9; padding: 14px; border-radius: 10px; border: 1px solid var(--line);">
+                                    <small style="color: var(--muted); font-weight: 600;">SOLICITUDES</small>
+                                    <div style="margin-top: 6px; display: grid; gap: 4px; font-size: 11px;">
+                                        <div><span class="dot amber"></span> Pendientes: <strong><?= $solPendientes ?></strong></div>
+                                        <div><span class="dot green"></span> Aprobadas: <strong><?= $solAprobadas ?></strong></div>
+                                        <div><span class="dot red"></span> Rechazadas: <strong><?= $solRechazadas ?></strong></div>
+                                    </div>
+                                    <a class="text-link" href="?seccion=solicitudes" style="font-size: 11px; display: inline-block; margin-top: 6px;">Ver solicitudes →</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 3: Últimas solicitudes + Estado de las propiedades -->
+                    <div class="agent-overview-grid" style="grid-template-columns: 1.4fr 1fr;">
+                        
+                        <div class="content-card">
+                            <div class="agent-card-heading">
+                                <div>
+                                    <h2>Últimas solicitudes de propiedades</h2>
+                                    <p>Revisiones recientes pendientes o procesadas</p>
+                                </div>
+                                <a class="text-link" href="?seccion=solicitudes">Ver todas →</a>
+                            </div>
+
+                            <div class="table-wrap">
+                                <table class="table agent-summary-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Propiedad</th>
+                                            <th>Estado</th>
+                                            <th>Fecha</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach (array_slice($requests, 0, 5) as $r): ?>
+                                            <tr>
+                                                <td>#<?= (int)$r['id_solicitud'] ?></td>
+                                                <td><strong><?= e($r['titulo']) ?></strong><small><?= e($r['cliente'] ?? '') ?></small></td>
+                                                <td>
+                                                    <?php 
+                                                        $stClass = match((int)$r['id_estado_verificacion']) {
+                                                            3 => 'green',
+                                                            4 => 'red',
+                                                            default => 'amber'
+                                                        };
+                                                    ?>
+                                                    <span class="status <?= $stClass ?>"><?= e($r['estado']) ?></span>
+                                                </td>
+                                                <td><?= e(date('d/m/Y', strtotime($r['fecha_solicitud']))) ?></td>
+                                                <td><a class="text-link" href="?seccion=solicitudes#solicitud-<?= (int)$r['id_solicitud'] ?>">Revisar</a></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        <?php if (!$requests): ?>
+                                            <tr><td colspan="5" class="agent-empty">No hay solicitudes registradas.</td></tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="content-card">
+                            <div class="agent-card-heading">
+                                <div>
+                                    <h2>Estado de las propiedades</h2>
+                                    <p>Métricas generales del catálogo</p>
+                                </div>
+                            </div>
+                            <div class="progress-list" style="margin-top: 15px; display: grid; gap: 12px;">
+                                <?php
+                                $estadosBarra = [
+                                    ['label' => 'Publicadas', 'val' => $propPublicadas, 'color' => '#123b57'],
+                                    ['label' => 'En revisión', 'val' => $propEnRevision, 'color' => '#d97706'],
+                                    ['label' => 'Rechazadas', 'val' => $propRechazadas, 'color' => '#dc2626'],
+                                ];
+                                foreach ($estadosBarra as $eb):
+                                    $w = round(($eb['val'] / $totalP) * 100);
+                                ?>
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                            <span><?= $eb['label'] ?></span>
+                                            <strong><?= $eb['val'] ?></strong>
+                                        </div>
+                                        <div style="height: 8px; background: #e5e7eb; border-radius: 99px; overflow: hidden;">
+                                            <div style="height: 100%; width: <?= $w ?>%; background: <?= $eb['color'] ?>; border-radius: 99px;"></div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 4: Actividad reciente -->
+                    <div class="content-card">
+                        <div class="agent-card-heading">
+                            <div>
+                                <h2>Actividad reciente</h2>
+                                <p>Registro de eventos y movimientos en el sistema</p>
+                            </div>
+                            <a class="text-link" href="?seccion=auditoria">Ver registro completo →</a>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="table agent-summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($actividadReciente as $act): ?>
+                                        <tr>
+                                            <td><?= e(date('d/m/Y H:i', strtotime($act['fecha']))) ?></td>
+                                            <td><strong><?= e($act['nombre'] . ' ' . $act['apellido']) ?></strong><small><?= e($act['rol']) ?></small></td>
+                                            <td><?= e($act['accion']) ?></td>
+                                            <td>#<?= (int)$act['id_registro'] ?> · <?= e($act['entidad']) ?> <?= $act['detalle'] ? '— ' . e($act['detalle']) : '' ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if (!$actividadReciente): ?>
+                                        <tr><td colspan="4" class="agent-empty">Sin actividad reciente registrada.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
 
 
@@ -784,7 +998,7 @@ function person_options(array $people, int $selected = 0): void
                                             </select>
                                             <button class="btn btn-outline">Asignar agente</button>
 
-                                        <?php elseif (!$r['id_agente']): ?>
+                                        <?elseif (!$r['id_agente']): ?>
                                             <button class="btn">Tomar solicitud</button>
 
                                         <?php else: ?>
