@@ -18,4 +18,19 @@ final class AuditoriaDAO
         }
         return $eventId;
     }
+
+    // Agregamos este método para que administrador.php pueda obtener los registros de auditoría
+    public function auditLog(int $limit = 50): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT a.*, u.nombre, u.apellido 
+            FROM auditoria a
+            JOIN usuarios u ON u.id_usuario = a.id_usuario
+            ORDER BY a.fecha DESC
+            LIMIT ?
+        ');
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
