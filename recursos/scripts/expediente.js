@@ -29,9 +29,12 @@ document.addEventListener('DOMContentLoaded',()=>{
    const any=rows.some(row=>row.querySelector('[type=checkbox]').checked);
    rows.forEach((row,index)=>{
     const check=row.querySelector('[type=checkbox]'),price=row.querySelector('[type=number]'),currency=row.querySelector('select');
+        const details=row.querySelector('[data-offer-details]'),minimum=row.querySelector('[data-minimum-price]');
+        if(details)details.hidden=!check.checked;
     price.disabled=!check.checked;currency.disabled=!check.checked;price.required=check.checked;
+        if(minimum){minimum.disabled=!check.checked;minimum.required=check.checked;minimum.setCustomValidity(check.checked&&minimum.value!==''&&Number(minimum.value)>Number(price.value)?'El monto mínimo no puede superar el precio de venta.':'');}
     check.setCustomValidity(index===0&&!any?'Seleccioná al menos una operación.':'');row.classList.toggle('offer-selected',check.checked);
    });
-  };group.addEventListener('change',update);update();
+    };group.addEventListener('change',update);group.addEventListener('input',update);update();
  });
 });

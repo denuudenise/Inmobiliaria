@@ -26,4 +26,8 @@ Después de la migración 005, ejecutar `006_consultas_sin_registro.sql`. Permit
 
 Después de importar el esquema de la base de datos, ejecutar `007_documentacion_pendiente.sql`. Permite indicar si faltan planos o escritura y guardar la aclaración del propietario en la solicitud y en la propiedad al aprobarla. La aclaración se muestra en la ficha privada de documentación. La solicitud permite adjuntar hasta 8 fotos/videos de 2 MB cada uno y hasta 8 documentos privados de 2 MB cada uno; los selectores permiten agregar archivos de forma acumulativa y muestran los nombres seleccionados.
 
+## Monto mínimo de venta
+
+Después de la migración 005, ejecutar `008_precio_minimo_venta.sql`. Agrega el monto mínimo que acepta el propietario para la venta. Debe ser mayor a cero y no superar el precio de venta publicado; se guarda con la misma moneda. Solo se muestra en los paneles del agente y del administrador, nunca en el catálogo ni en el detalle público.
+
 Los cierres eligen una oferta concreta. La venta y el alquiler conservan su propia moneda y tipo de operación. Una operación cerrada retira la propiedad del catálogo según los estados comerciales existentes.

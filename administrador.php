@@ -906,7 +906,7 @@ function person_options(array $people, int $selected = 0): void
                                                 <strong><?= e($p['titulo']) ?></strong><br>
                                                 <small><?= e($p['localidad']) ?></small>
                                             </td>
-                                            <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?></div><?php endforeach; ?></td>
+                                            <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?><?php if((int)$listedOffer['id_tipo_transaccion']===1 && !empty($listedOffer['precio_minimo'])): ?><small>Mínimo aceptado (interno): <?= e($listedOffer['moneda'].' '.number_format((float)$listedOffer['precio_minimo'],2,',','.')) ?></small><?php endif; ?></div><?php endforeach; ?></td>
                                             <td><?= e($p['verificacion']) ?></td>
                                             <td><?= e($p['estado']) ?></td><td><a class="text-link" href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= (int)$p['id_propiedad'] ?>">Documentación e impuestos</a></td>
                                             <td>
@@ -959,7 +959,7 @@ function person_options(array $people, int $selected = 0): void
                                 </p>
 
                                 
-                                <?php $offerKind='solicitud'; $offerId=(int)$r['id_solicitud']; require __DIR__.'/sistema/Vistas/Diseno/ofertas-resumen.php'; ?>
+                                <?php $offerKind='solicitud'; $offerId=(int)$r['id_solicitud']; $showMinimumSale=true; require __DIR__.'/sistema/Vistas/Diseno/ofertas-resumen.php'; unset($showMinimumSale); ?>
 <?php if ($admin || (int)$r['id_agente']===(int)$user['id']): ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= (int)$r['id_solicitud'] ?>">Revisar documentación e impuestos</a></p><?php endif; ?>
 <?php
                                 $multimedia = query_rows(

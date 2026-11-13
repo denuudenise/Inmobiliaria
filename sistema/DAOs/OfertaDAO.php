@@ -15,10 +15,16 @@ final class OfertaDAO
    if(empty($row['activa']))continue;
    $price=(string)($row['precio']??'');$currency=(string)($row['moneda']??'');
    if(!preg_match('/^\d{1,10}(?:\.\d{1,2})?$/D',$price) || (float)$price<=0 || (float)$price>9999999999.99 || !in_array($currency,['ARS','USD'],true))throw new RuntimeException('Ingresá un precio mayor a cero y moneda para cada operación seleccionada.');
-   $offers[$id]=['precio'=>$price,'moneda'=>$currency,'nombre'=>$type['nombre']];
+   $minimum=null;
+   if($id===1){
+    $minimum=(string)($row['precio_minimo']??'');
+    if(!preg_match('/^\d{1,10}(?:\.\d{1,2})?$/D',$minimum)||(float)$minimum<=0||(float)$minimum>(float)$price)throw new RuntimeException('Indicá un monto mínimo de venta mayor a cero y no superior al precio publicado.');
+   }
+   $offers[$id]=['precio'=>$price,'moneda'=>$currency,'nombre'=>$type['nombre'],'precio_minimo'=>$minimum];
   }
   if(!$offers)throw new RuntimeException('Seleccioná al menos una operación: venta, alquiler o alquiler temporario.');
   $first=array_key_first($offers);$data['operacion']=$names?$offers[$first]['nombre']:$first;$data['precio']=$offers[$first]['precio'];$data['moneda']=$offers[$first]['moneda'];
+  $data['ofertas_normalizadas']=$offers;
   return $data;
  }
  public function read(string $kind,int $id): array
@@ -38,10 +44,9 @@ final class OfertaDAO
   if(!$this->db->inTransaction())throw new LogicException('Se requiere una transacción.');
   [$table,$key,$features]=$kind==='solicitud'?['solicitud_ofertas','id_solicitud','solicitud_caracteristicas']:['propiedad_ofertas','id_propiedad','propiedad_caracteristicas'];
   if(isset($data['ofertas_form'])){
-   $this->normalize($data);
+   $normalized=$this->normalize($data);$offers=$normalized['ofertas_normalizadas'];
    $this->db->prepare("DELETE FROM $table WHERE $key=?")->execute([$id]);
-   $allowed=array_map('intval',$this->db->query('SELECT id_tipo_transaccion FROM tipos_transaccion')->fetchAll(PDO::FETCH_COLUMN));
-   foreach($data['ofertas'] as $type=>$offer)if(!empty($offer['activa']) && in_array((int)$type,$allowed,true))$this->db->prepare("INSERT INTO $table ($key,id_tipo_transaccion,precio,moneda) VALUES (?,?,?,?)")->execute([$id,$type,$offer['precio'],$offer['moneda']]);
+   foreach($offers as $type=>$offer)$this->db->prepare("INSERT INTO $table ($key,id_tipo_transaccion,precio,moneda,precio_minimo) VALUES (?,?,?,?,?)")->execute([$id,$type,$offer['precio'],$offer['moneda'],$offer['precio_minimo']]);
   }
   if(isset($data['caracteristicas_form'])){
    $selected=$data['caracteristicas']??[];if(!is_array($selected))throw new RuntimeException('Características inválidas.');
@@ -54,7 +59,7 @@ final class OfertaDAO
  public function approve(int $request,int $property): void
  {
   $offers=$this->read('solicitud',$request);
-  if($offers){$this->db->prepare('DELETE FROM propiedad_ofertas WHERE id_propiedad=?')->execute([$property]);foreach($offers as $o)$this->db->prepare('INSERT INTO propiedad_ofertas (id_propiedad,id_tipo_transaccion,precio,moneda) VALUES (?,?,?,?)')->execute([$property,$o['id_tipo_transaccion'],$o['precio'],$o['moneda']]);}
+  if($offers){$this->db->prepare('DELETE FROM propiedad_ofertas WHERE id_propiedad=?')->execute([$property]);foreach($offers as $o)$this->db->prepare('INSERT INTO propiedad_ofertas (id_propiedad,id_tipo_transaccion,precio,moneda,precio_minimo) VALUES (?,?,?,?,?)')->execute([$property,$o['id_tipo_transaccion'],$o['precio'],$o['moneda'],$o['precio_minimo']??null]);}
   $this->db->prepare('INSERT INTO propiedad_caracteristicas (id_propiedad,id_caracteristica) SELECT ?,id_caracteristica FROM solicitud_caracteristicas WHERE id_solicitud=?')->execute([$property,$request]);
  }
 }

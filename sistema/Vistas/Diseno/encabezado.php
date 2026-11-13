@@ -20,7 +20,7 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
     >
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="/Inmobiliaria/recursos/estilos/estilos.css">
+    <link rel="stylesheet" href="/Inmobiliaria/recursos/estilos/estilos.css?v=<?= (int)filemtime(__DIR__.'/../../../recursos/estilos/estilos.css') ?>">
 </head>
 
 <body

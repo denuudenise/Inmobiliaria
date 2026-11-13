@@ -17,6 +17,7 @@ $allowedOperations = array_column(
 );
 
 $errorMessage = '';
+$fieldErrors = [];
 $successMessage = '';
 $documentState = [];
 
@@ -28,7 +29,8 @@ if (isset($_SESSION['flash_success'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    try { $_POST=(new OfertaDAO(Database::connection()))->normalize($_POST,true); } catch (RuntimeException $e) { $errorMessage=$e->getMessage(); }
+    try { $_POST=(new OfertaDAO(Database::connection()))->normalize($_POST,true); }
+    catch (RuntimeException $e) { $fieldErrors['ofertas']=$e->getMessage(); }
 
     $data = [
         'moneda'      => (string)($_POST['moneda'] ?? 'USD'),
@@ -47,46 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
 
-    $invalidNumbers = false;
-
-    foreach (['ambientes', 'dormitorios', 'banos', 'antiguedad'] as $field) {
-        if (
-            $data[$field] !== ''
-            && (
-                filter_var($data[$field], FILTER_VALIDATE_INT) === false
-                || (int)$data[$field] < 0
-                || (int)$data[$field] > 1000
-            )
-        ) {
-            $invalidNumbers = true;
-        }
+    if (!in_array($data['tipo'], $allowedTypes, true)) $fieldErrors['tipo']='Seleccioná un tipo de propiedad.';
+    if ($data['titulo']==='' || mb_strlen($data['titulo'])<5 || mb_strlen($data['titulo'])>200 || preg_match('/[\p{L}\p{N}]/u',$data['titulo'])!==1 || preg_match('/^[\p{L}\p{M}\p{N}\s.,:;()\/#º°&+\'-]+$/uD',$data['titulo'])!==1) $fieldErrors['titulo']='Escribí un título de 5 a 200 caracteres con letras o números; evitá símbolos no permitidos.';
+    if (!Validacion::direccion($data['direccion'])) $fieldErrors['direccion']='Ingresá una dirección de 3 a 255 caracteres con al menos una letra.';
+    if (!Validacion::localidad($data['localidad'])) $fieldErrors['localidad']='Ingresá una localidad de 2 a 100 caracteres con al menos una letra.';
+    if (mb_strlen($data['descripcion'])<10 || mb_strlen($data['descripcion'])>3000 || preg_match('/[\p{L}\p{N}]/u',$data['descripcion'])!==1) $fieldErrors['descripcion']='Describí la propiedad en 10 a 3000 caracteres.';
+    if (!preg_match('/^\d{1,6}(?:\.\d{1,2})?$/D',$data['superficie']) || (float)$data['superficie']<=0 || (float)$data['superficie']>999999) $fieldErrors['superficie']='Ingresá una superficie mayor a 0 y de hasta 999.999 m².';
+    foreach (['ambientes'=>'ambientes','dormitorios'=>'dormitorios','banos'=>'baños','antiguedad'=>'antigüedad'] as $field=>$label) {
+        if ($data[$field]!=='' && (filter_var($data[$field],FILTER_VALIDATE_INT)===false || (int)$data[$field]<0 || (int)$data[$field]>1000)) $fieldErrors[$field]='Ingresá un número entero entre 0 y 1000 o dejá el campo vacío.';
     }
+    if (!isset($_POST['declaracion'])) $fieldErrors['declaracion']='Confirmá que los datos son correctos para enviar la solicitud.';
 
-  
-    if (
-        $errorMessage !== '' || $invalidNumbers
-        || !isset($_POST['declaracion'])
-        || !in_array($data['moneda'], ['USD', 'ARS'], true)
-        || !in_array($data['tipo'], $allowedTypes, true)
-        || !in_array($data['operacion'], $allowedOperations, true)
-        || mb_strlen($data['titulo']) > 200
-        || mb_strlen($data['direccion']) > 255
-        || mb_strlen($data['localidad']) > 100
-        || (float)$data['superficie'] > 999999
-        || (float)$data['precio'] > 9999999999
-        || $data['titulo'] === ''
-        || $data['direccion'] === ''
-        || $data['localidad'] === ''
-        || $data['descripcion'] === ''
-        || !is_numeric($data['superficie'])
-        || (float)$data['superficie'] <= 0
-        || (
-            $data['precio'] !== ''
-            && (!is_numeric($data['precio']) || (float)$data['precio'] < 0)
-        )
-    ) {
-        $errorMessage = 'Completá los campos obligatorios con valores válidos.';
-
+    if ($fieldErrors) {
+        $errorMessage = 'Hay campos para corregir. Te indicamos qué revisar debajo de cada uno.';
     } else {
 
       
@@ -110,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($fileCount > 8) {
                 $errorMessage = 'Podés adjuntar hasta 8 archivos por solicitud.';
+                $fieldErrors['multimedia']=$errorMessage;
 
             } else {
                 $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -123,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($uploadError !== UPLOAD_ERR_OK || (int)$_FILES['multimedia']['size'][$i] > 2 * 1024 * 1024) {
                         $errorMessage = 'Cada archivo debe pesar hasta 2 MB y cargarse correctamente.';
+                        $fieldErrors['multimedia']=$errorMessage;
                         break;
                     }
 
@@ -131,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if (!isset($mimeExtensions[$mime]) || !is_uploaded_file($tmp)) {
                         $errorMessage = 'Formato de archivo no permitido. Usá JPG, PNG, WEBP, MP4 o WEBM.';
+                        $fieldErrors['multimedia']=$errorMessage;
                         break;
                     }
 
@@ -141,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if (!move_uploaded_file($tmp, $destination)) {
                         $errorMessage = 'No se pudo guardar uno de los archivos.';
+                        $fieldErrors['multimedia']=$errorMessage;
                         break;
                     }
 
@@ -175,9 +154,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $errorMessage = $error instanceof PDOException
-                    ? 'No se pudo guardar la solicitud. Revisá los datos ingresados.'
-                    : $error->getMessage();
+                if ($error instanceof PDOException) {
+                    $errorMessage='No se pudo guardar la solicitud. Revisá la conexión con la base de datos.';
+                } elseif (str_contains($error->getMessage(),'planos')) {
+                    $fieldErrors['planos']=$error->getMessage();
+                } elseif (str_contains($error->getMessage(),'escritura')) {
+                    $fieldErrors['escrituras']=$error->getMessage();
+                } elseif (str_contains($error->getMessage(),'Si te falta algún documento')) {
+                    $fieldErrors['observaciones_documentacion']=$error->getMessage();
+                } elseif (str_contains($error->getMessage(),'documento')) {
+                    $fieldErrors['planos']=$error->getMessage();
+                } elseif (str_contains($error->getMessage(),'monto mínimo')) {
+                    $fieldErrors['ofertas']=$error->getMessage();
+                } elseif (str_contains($error->getMessage(),'archivos') || str_contains($error->getMessage(),'archivo')) {
+                    $fieldErrors['multimedia']=$error->getMessage();
+                } else {
+                    $errorMessage=$error->getMessage();
+                }
             }
 
 
@@ -221,22 +214,23 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                 <div class="hint-box" role="status"><?= e($successMessage) ?></div>
             <?php endif; ?>
 
-            <?php if ($errorMessage): ?>
+            <?php if ($errorMessage && !$fieldErrors): ?>
                 <div class="not-implemented" role="alert"><?= e($errorMessage) ?></div>
             <?php endif; ?>
+            <?php if ($fieldErrors): ?><div class="register-alert" role="alert"><span class="register-alert-icon">!</span><span><strong>Hay <?= count($fieldErrors) ?> campo<?= count($fieldErrors)===1?'':'s' ?> para revisar</strong><small>Encontrá el aviso debajo de cada campo.</small></span></div><?php endif; ?>
 
             <div class="request-layout">
 
             
-                <form class="form-panel" method="post" enctype="multipart/form-data">
+                <form class="form-panel request-validation-form" id="solicitud-propiedad-form" method="post" enctype="multipart/form-data" novalidate>
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
                     <div class="form-grid">
 
                     
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['tipo'])?' has-error':'' ?>">
                             <label for="tipo">Tipo de propiedad *</label>
-                            <select id="tipo" name="tipo" required>
+                            <select id="tipo" name="tipo" required data-validate="tipo" data-hint="Elegí el tipo de inmueble que querés publicar." aria-invalid="<?= isset($fieldErrors['tipo'])?'true':'false' ?>" aria-describedby="ayuda-tipo">
                                 <option value="">Seleccionar</option>
                                 <?php foreach ($allowedTypes as $type): ?>
                                     <option value="<?= e($type) ?>" <?= ($_POST['tipo'] ?? '') === $type ? 'selected' : '' ?>>
@@ -244,58 +238,87 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="field-feedback" id="ayuda-tipo" aria-live="polite"><?= e($fieldErrors['tipo']??'') ?></small>
                         </div>
 
                      
 
 
-                        <div class="field full">
+                        <div class="field full<?= isset($fieldErrors['titulo'])?' has-error':'' ?>">
                             <label for="titulo">Título de la propiedad *</label>
                             <input
                                 id="titulo"
                                 name="titulo"
+                                type="text"
                                 required
+                                minlength="5"
                                 maxlength="200"
+                                data-validate="titulo"
+                                data-hint="Usá de 5 a 200 caracteres con letras y números."
                                 value="<?= e((string)($_POST['titulo'] ?? '')) ?>"
                                 placeholder="Ej: Casa luminosa con jardín en San Isidro"
+                                aria-invalid="<?= isset($fieldErrors['titulo'])?'true':'false' ?>"
+                                aria-describedby="ayuda-titulo"
                             >
+                            <small class="field-feedback" id="ayuda-titulo" aria-live="polite"><?= e($fieldErrors['titulo']??'') ?></small>
                         </div>
 
                  
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['direccion'])?' has-error':'' ?>">
                             <label for="direccion">Dirección *</label>
                             <input
                                 id="direccion"
                                 name="direccion"
+                                type="text"
                                 required
+                                minlength="3"
                                 maxlength="255"
+                                data-validate="direccion"
+                                data-hint="Ingresá la calle y altura; debe incluir al menos una letra."
                                 value="<?= e((string)($_POST['direccion'] ?? '')) ?>"
                                 placeholder="Calle y altura"
+                                aria-invalid="<?= isset($fieldErrors['direccion'])?'true':'false' ?>"
+                                aria-describedby="ayuda-direccion"
                             >
+                            <small class="field-feedback" id="ayuda-direccion" aria-live="polite"><?= e($fieldErrors['direccion']??'') ?></small>
                         </div>
 
                    
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['localidad'])?' has-error':'' ?>">
                             <label for="localidad">Localidad *</label>
                             <input
                                 id="localidad"
                                 name="localidad"
+                                type="text"
                                 required
+                                minlength="2"
                                 maxlength="100"
+                                data-validate="localidad"
+                                data-hint="Ingresá un barrio o localidad con al menos una letra."
                                 value="<?= e((string)($_POST['localidad'] ?? '')) ?>"
                                 placeholder="Barrio o localidad"
+                                aria-invalid="<?= isset($fieldErrors['localidad'])?'true':'false' ?>"
+                                aria-describedby="ayuda-localidad"
                             >
+                            <small class="field-feedback" id="ayuda-localidad" aria-live="polite"><?= e($fieldErrors['localidad']??'') ?></small>
                         </div>
 
                   
-                        <div class="field full">
+                        <div class="field full<?= isset($fieldErrors['descripcion'])?' has-error':'' ?>">
                             <label for="descripcion">Descripción *</label>
                             <textarea
                                 id="descripcion"
                                 name="descripcion"
+                                minlength="10"
+                                maxlength="3000"
                                 required
+                                data-validate="descripcion"
+                                data-hint="Contá un poco sobre la propiedad; escribí al menos 10 caracteres."
+                                aria-invalid="<?= isset($fieldErrors['descripcion'])?'true':'false' ?>"
+                                aria-describedby="ayuda-descripcion"
                                 placeholder="Contanos un poco sobre la propiedad…"
                             ><?= e((string)($_POST['descripcion'] ?? '')) ?></textarea>
+                            <small class="field-feedback" id="ayuda-descripcion" aria-live="polite"><?= e($fieldErrors['descripcion']??'') ?></small>
                         </div>
 
                       
@@ -305,71 +328,105 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
 
                    
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['superficie'])?' has-error':'' ?>">
                             <label for="superficie">Superficie total (m²) *</label>
                             <input
                                 id="superficie"
                                 name="superficie"
                                 type="number"
                                 min="1"
+                                max="999999"
                                 step="0.01"
                                 required
+                                data-validate="superficie"
+                                data-hint="Ingresá una superficie mayor que 0 m²."
                                 value="<?= e((string)($_POST['superficie'] ?? '')) ?>"
+                                aria-invalid="<?= isset($fieldErrors['superficie'])?'true':'false' ?>"
+                                aria-describedby="ayuda-superficie"
                             >
+                            <small class="field-feedback" id="ayuda-superficie" aria-live="polite"><?= e($fieldErrors['superficie']??'') ?></small>
                         </div>
 
                   
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['ambientes'])?' has-error':'' ?>">
                             <label for="ambientes">Ambientes</label>
                             <input
                                 id="ambientes"
                                 name="ambientes"
                                 type="number"
                                 min="0"
+                                max="1000"
+                                step="1"
+                                data-validate="entero"
+                                data-hint="Ingresá un número entero de 0 a 1000 o dejalo vacío."
                                 value="<?= e((string)($_POST['ambientes'] ?? '')) ?>"
+                                aria-invalid="<?= isset($fieldErrors['ambientes'])?'true':'false' ?>"
+                                aria-describedby="ayuda-ambientes"
                             >
+                            <small class="field-feedback" id="ayuda-ambientes" aria-live="polite"><?= e($fieldErrors['ambientes']??'') ?></small>
                         </div>
 
                      
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['dormitorios'])?' has-error':'' ?>">
                             <label for="dormitorios">Dormitorios</label>
                             <input
                                 id="dormitorios"
                                 name="dormitorios"
                                 type="number"
                                 min="0"
+                                max="1000"
+                                step="1"
+                                data-validate="entero"
+                                data-hint="Ingresá un número entero de 0 a 1000 o dejalo vacío."
                                 value="<?= e((string)($_POST['dormitorios'] ?? '')) ?>"
+                                aria-invalid="<?= isset($fieldErrors['dormitorios'])?'true':'false' ?>"
+                                aria-describedby="ayuda-dormitorios"
                             >
+                            <small class="field-feedback" id="ayuda-dormitorios" aria-live="polite"><?= e($fieldErrors['dormitorios']??'') ?></small>
                         </div>
 
                   
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['banos'])?' has-error':'' ?>">
                             <label for="banos">Baños</label>
                             <input
                                 id="banos"
                                 name="banos"
                                 type="number"
                                 min="0"
+                                max="1000"
+                                step="1"
+                                data-validate="entero"
+                                data-hint="Ingresá un número entero de 0 a 1000 o dejalo vacío."
                                 value="<?= e((string)($_POST['banos'] ?? '')) ?>"
+                                aria-invalid="<?= isset($fieldErrors['banos'])?'true':'false' ?>"
+                                aria-describedby="ayuda-banos"
                             >
+                            <small class="field-feedback" id="ayuda-banos" aria-live="polite"><?= e($fieldErrors['banos']??'') ?></small>
                         </div>
 
                     
-                        <div class="field">
+                        <div class="field<?= isset($fieldErrors['antiguedad'])?' has-error':'' ?>">
                             <label for="antiguedad">Antigüedad (años)</label>
                             <input
                                 id="antiguedad"
                                 name="antiguedad"
                                 type="number"
                                 min="0"
+                                max="1000"
+                                step="1"
+                                data-validate="entero"
+                                data-hint="Ingresá un número entero de 0 a 1000 o dejalo vacío."
                                 value="<?= e((string)($_POST['antiguedad'] ?? '')) ?>"
+                                aria-invalid="<?= isset($fieldErrors['antiguedad'])?'true':'false' ?>"
+                                aria-describedby="ayuda-antiguedad"
                             >
+                            <small class="field-feedback" id="ayuda-antiguedad" aria-live="polite"><?= e($fieldErrors['antiguedad']??'') ?></small>
                         </div>
 
                      
                         <?php require dirname(__DIR__).'/sistema/Vistas/Diseno/expediente-form.php'; ?>
 <?php $offerKind='solicitud'; $offerId=0; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
-<div class="field full">
+<div class="field full<?= isset($fieldErrors['multimedia'])?' has-error':'' ?>">
                             <label for="multimedia">Fotos y videos (hasta 8 archivos en total, 2 MB cada uno)</label>
 
                             <div class="file-drop">
@@ -386,19 +443,25 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                 >
                                 <button class="btn btn-outline" type="button" data-add-files="multimedia">＋ Agregar más archivos</button>
                                 <ul class="selected-files" data-selected-files="multimedia" aria-live="polite"></ul>
+                                <small class="field-feedback field-error" id="ayuda-multimedia" aria-live="polite"><?= e($fieldErrors['multimedia']??'') ?></small>
                             </div>
                         </div>
 
                        
-                        <div class="field full">
+                        <div class="field full<?= isset($fieldErrors['declaracion'])?' has-error':'' ?>">
                             <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400">
                                 <input
                                     type="checkbox"
                                     name="declaracion"
                                     required
+                                    data-validate="checkbox"
+                                    data-hint="Confirmá que los datos son correctos para enviar la solicitud."
+                                    aria-invalid="<?= isset($fieldErrors['declaracion'])?'true':'false' ?>"
+                                    aria-describedby="ayuda-declaracion"
                                     style="width:auto;margin:1px 0"
                                 >Confirmo que los datos son correctos y autorizo al equipo a contactarme para coordinar una visita.
                             </label>
+                            <small class="field-feedback" id="ayuda-declaracion" aria-live="polite"><?= e($fieldErrors['declaracion']??'') ?></small>
                         </div>
 
                         <!-- Enviar -->
