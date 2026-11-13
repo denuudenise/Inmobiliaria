@@ -18,6 +18,7 @@ $allowedOperations = array_column(
 
 $errorMessage = '';
 $successMessage = '';
+$documentState = [];
 
 if (isset($_SESSION['flash_success'])) {
     $successMessage = (string)$_SESSION['flash_success'];
@@ -369,7 +370,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         <?php require dirname(__DIR__).'/sistema/Vistas/Diseno/expediente-form.php'; ?>
 <?php $offerKind='solicitud'; $offerId=0; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
 <div class="field full">
-                            <label for="multimedia">Fotos y videos (hasta 8 archivos, 2 MB cada uno)</label>
+                            <label for="multimedia">Fotos y videos (hasta 8 archivos en total, 2 MB cada uno)</label>
 
                             <div class="file-drop">
                                 ↑<br>
@@ -381,7 +382,10 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                     type="file"
                                     accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
                                     multiple
+                                    data-accumulate-files
                                 >
+                                <button class="btn btn-outline" type="button" data-add-files="multimedia">＋ Agregar más archivos</button>
+                                <ul class="selected-files" data-selected-files="multimedia" aria-live="polite"></ul>
                             </div>
                         </div>
 

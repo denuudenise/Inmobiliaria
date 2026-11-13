@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
 }
 $records=$dao->records($context); $pageTitle='Documentación e impuestos';
+$documentState=$context;
 require __DIR__.'/sistema/Vistas/Diseno/encabezado.php';
 ?>
 <section class="dashboard narrow private-page">
@@ -25,6 +26,7 @@ require __DIR__.'/sistema/Vistas/Diseno/encabezado.php';
 <h1>Documentación e impuestos</h1><p><?= e($context['title']) ?></p>
 <?php notice(); if ($error): ?><p class="notice error" role="alert"><?= e($error) ?></p><?php endif; ?>
 <section class="content-card"><h2>Documentación privada</h2>
+<?php if (!empty($context['faltan_planos']) || !empty($context['falta_escritura'])): ?><div class="notice"><strong>Documentación pendiente:</strong> <?= !empty($context['faltan_planos'])?'planos':'' ?><?= !empty($context['faltan_planos']) && !empty($context['falta_escritura'])?' y ':'' ?><?= !empty($context['falta_escritura'])?'escritura':'' ?>. <?php if ($context['observaciones_documentacion']!==''): ?><?= e($context['observaciones_documentacion']) ?><?php endif; ?></div><?php endif; ?>
 <?php if (!$records['documentos']): ?><p>No hay documentos cargados.</p><?php endif; ?>
 <ul class="private-documents"><?php foreach ($records['documentos'] as $doc): ?><li><strong><?= e($doc['tipo']) ?></strong> — <a href="/Inmobiliaria/documento.php?id=<?= (int)$doc['id_documento'] ?>"><?= e($doc['nombre']) ?></a><small> · <?= e($doc['fecha']) ?></small></li><?php endforeach; ?></ul></section>
 <section class="content-card"><h2>Impuestos registrados</h2>

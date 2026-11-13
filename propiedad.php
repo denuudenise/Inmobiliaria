@@ -14,13 +14,13 @@ if (!$property) {
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user = require_client();
     verify_csrf();
 
     if (!$property) {
         $error = 'Esta propiedad ya no está disponible.';
 
     } elseif (($_POST['accion'] ?? '') === 'enviar_oferta') {
+        $user = require_client();
         try {
             (new SeguimientoDAO(Database::connection()))->submitOffer($user,$id,(int)($_POST['operacion']??0),$_POST);
             flash('Tu oferta fue enviada. El equipo la revisará y podrás ver el estado en tu panel.');
@@ -29,22 +29,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error=$exception instanceof PDOException?'No se pudo enviar la oferta. Intentá nuevamente.':$exception->getMessage();
         }
 
-    } else {
+    } elseif (($_POST['accion'] ?? '') === 'enviar_consulta') {
         $message = trim((string)($_POST['mensaje'] ?? ''));
+        $name = trim((string)($_POST['nombre'] ?? ''));
+        $email = trim((string)($_POST['email'] ?? ''));
+        $phone = trim((string)($_POST['telefono'] ?? ''));
 
-        if (mb_strlen($message) < 10 || mb_strlen($message) > 3000) {
-            $error = 'Escribí una consulta de entre 10 y 3000 caracteres.';
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 120 || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL))
+            || mb_strlen($email) > 190 || mb_strlen($phone) > 40 || ($phone === '' && $email === '')
+            || mb_strlen($message) > 3000) {
+            $error = 'Ingresá tu nombre y un correo válido o un teléfono para que podamos contactarte.';
 
         } else {
             execute_sql(
-                "INSERT INTO contactos (id_cliente, id_agente, id_propiedad, tipo, descripcion)
-                 SELECT ?, p.id_agente_creador, p.id_propiedad, 'Consulta', ?
+                "INSERT INTO contactos (id_cliente, id_agente, id_propiedad, tipo, descripcion, nombre_contacto, email_contacto, telefono_contacto)
+                 SELECT ?, p.id_agente_creador, p.id_propiedad, 'Consulta', ?, ?, ?, ?
                  FROM propiedades p
                  WHERE p.id_propiedad=?",
-                [$user['id'], $message, $id]
+                [current_user() && current_user()['role'] === 'Cliente' ? current_user()['id'] : null, $message, $name, $email, $phone, $id]
             );
 
-            flash('Consulta enviada. Podés ver la respuesta en Mis consultas.');
+            flash('¡Gracias! El agente de esta propiedad se pondrá en contacto con vos.');
             redirect('/Inmobiliaria/propiedad.php?id=' . $id . '#contacto');
         }
     }
@@ -234,17 +239,19 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
                     </details>
 
-                    <!-- Cliente logueado: formulario de consulta -->
                     <form method="post" class="modal-form">
                         <?php csrf_field(); ?>
+                        <input type="hidden" name="accion" value="enviar_consulta">
+
+                        <div class="field"><label for="nombre">Tu nombre</label><input id="nombre" name="nombre" required minlength="2" maxlength="120" value="<?= e(current_user()['name'] ?? '') ?>"></div>
+                        <div class="field"><label for="email">Correo electrónico</label><input id="email" name="email" type="email" maxlength="190" value="<?= e(current_user()['email'] ?? '') ?>"></div>
+                        <div class="field"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="tel" maxlength="40" value="<?= e(current_user()['phone'] ?? '') ?>"><small>Dejanos un correo o un teléfono.</small></div>
 
                         <div class="field">
-                            <label for="mensaje">Tu consulta</label>
+                            <label for="mensaje">Mensaje (opcional)</label>
                             <textarea
                                 id="mensaje"
                                 name="mensaje"
-                                required
-                                minlength="10"
                                 maxlength="3000"
                                 placeholder="Hola, me gustaría coordinar una visita…"
                             ><?= e((string)($_POST['mensaje'] ?? '')) ?></textarea>
@@ -253,15 +260,20 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                         <button class="btn">Enviar consulta</button>
                     </form>
 
-                    <p>
-                        <a class="text-link" href="/Inmobiliaria/cliente/actividad.php?seccion=consultas">Ver mis consultas</a>
-                    </p>
+                    <?php if (current_user() && current_user()['role'] === 'Cliente'): ?><p><a class="text-link" href="/Inmobiliaria/cliente/actividad.php?seccion=consultas">Ver mis consultas</a></p><?php endif; ?>
 
                 <?php elseif (!current_user()): ?>
 
                    
-                    <p>Ingresá como cliente para enviar tu consulta y recibir la respuesta en tu panel.</p>
-                    <a class="btn" href="/Inmobiliaria/login.php?propiedad=<?= $id ?>">Ingresar para consultar</a>
+                    <p>Dejanos tus datos de contacto y el agente de la propiedad se comunicará con vos. No necesitás registrarte.</p>
+                    <form method="post" class="modal-form">
+                        <?php csrf_field(); ?><input type="hidden" name="accion" value="enviar_consulta">
+                        <div class="field"><label for="nombre">Tu nombre</label><input id="nombre" name="nombre" required minlength="2" maxlength="120" value="<?= e((string)($_POST['nombre'] ?? '')) ?>"></div>
+                        <div class="field"><label for="email">Correo electrónico</label><input id="email" name="email" type="email" maxlength="190" value="<?= e((string)($_POST['email'] ?? '')) ?>"></div>
+                        <div class="field"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="tel" maxlength="40" value="<?= e((string)($_POST['telefono'] ?? '')) ?>"><small>Dejanos un correo o un teléfono.</small></div>
+                        <div class="field"><label for="mensaje">Mensaje (opcional)</label><textarea id="mensaje" name="mensaje" maxlength="3000" placeholder="Hola, me gustaría coordinar una visita…"><?= e((string)($_POST['mensaje'] ?? '')) ?></textarea></div>
+                        <button class="btn">Enviar consulta</button>
+                    </form>
 
                 <?php else: ?>
 

@@ -7,6 +7,12 @@ final class SolicitudPropiedadDAO
 
     public function create(int $clientId, array $data, array $files = [], array $privateData = []): int
     {
+        $planosErrors=$_FILES['planos']['error']??null;
+        $escriturasErrors=$_FILES['escrituras']['error']??null;
+        $hasPlanos=is_array($planosErrors) && in_array(UPLOAD_ERR_OK,$planosErrors,true);
+        $hasEscritura=is_array($escriturasErrors) && in_array(UPLOAD_ERR_OK,$escriturasErrors,true);
+        if (!$hasPlanos && empty($privateData['faltan_planos'])) throw new RuntimeException('Adjuntá los planos o indicá que todavía no los tenés.');
+        if (!$hasEscritura && empty($privateData['falta_escritura'])) throw new RuntimeException('Adjuntá la escritura o indicá que todavía no la tenés.');
         $data=array_merge($data,array_intersect_key($privateData,array_flip(['ofertas_form','ofertas','caracteristicas_form','caracteristicas'])));
         $data=(new OfertaDAO($this->db))->normalize($data,true);
         $expediente=new ExpedienteDAO($this->db);

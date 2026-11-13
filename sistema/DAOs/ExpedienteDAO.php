@@ -20,7 +20,7 @@ final class ExpedienteDAO
         $agent=$kind==='propiedad'?(int)$r['id_agente_creador']:(int)$r['id_agente'];
         $allowed=$user['role']==='Administrador' || ($user['role']==='Agente' && $agent===(int)$user['id']) || ($user['role']==='Cliente' && $owner===(int)$user['id']);
         if (!$allowed) throw new RuntimeException('No tenés acceso a esta documentación.');
-        return ['kind'=>$kind,'id'=>$id,'property'=>$kind==='propiedad'?$id:null,'request'=>$kind==='solicitud'?$id:($r['id_solicitud']??null),'title'=>$r['titulo']];
+        return ['kind'=>$kind,'id'=>$id,'property'=>$kind==='propiedad'?$id:null,'request'=>$kind==='solicitud'?$id:($r['id_solicitud']??null),'title'=>$r['titulo'],'faltan_planos'=>(int)($r['faltan_planos']??0),'falta_escritura'=>(int)($r['falta_escritura']??0),'observaciones_documentacion'=>(string)($r['observaciones_documentacion']??'')];
     }
 
     public static function tax(array $data): ?array
@@ -42,12 +42,24 @@ final class ExpedienteDAO
     {
         if (!$this->db->inTransaction() || (!$property && !$request)) throw new LogicException('Se requiere una ficha y una transacción.');
         $tax=self::tax($data);
+        $planosErrors=$_FILES['planos']['error']??[];
+        $escriturasErrors=$_FILES['escrituras']['error']??[];
+        $hasPlanos=is_array($planosErrors) && in_array(UPLOAD_ERR_OK,$planosErrors,true);
+        $hasEscritura=is_array($escriturasErrors) && in_array(UPLOAD_ERR_OK,$escriturasErrors,true);
+        $faltanPlanos=isset($data['faltan_planos']) && !$hasPlanos?1:0;
+        $faltaEscritura=isset($data['falta_escritura']) && !$hasEscritura?1:0;
+        $documentNotes=trim((string)($data['observaciones_documentacion']??''));
+        if (mb_strlen($documentNotes)>1000 || (($faltanPlanos || $faltaEscritura) && mb_strlen($documentNotes)<10)) throw new RuntimeException('Si te falta algún documento, explicá brevemente la situación (al menos 10 caracteres).');
         $groups=['planos'=>'Plano','escrituras'=>'Escritura','comprobantes'=>'Comprobante']; $count=0;
         foreach ($groups as $field=>$type) foreach (($_FILES[$field]['error']??[]) as $error) if ($error!==UPLOAD_ERR_NO_FILE) $count++;
         if ($count>8) throw new RuntimeException('Adjuntá hasta 8 documentos privados por envío.');
         $folder=dirname(__DIR__).'/privados';
         $allowed=['application/pdf'=>'pdf','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
         try {
+            $table=$property?'propiedades':'solicitudes_publicacion';
+            $key=$property?'id_propiedad':'id_solicitud';
+            $this->db->prepare("UPDATE $table SET faltan_planos=?, falta_escritura=?, observaciones_documentacion=? WHERE $key=?")->execute([$faltanPlanos,$faltaEscritura,$documentNotes!==''?$documentNotes:null,$property??$request]);
+            if ($property && $request) $this->db->prepare('UPDATE solicitudes_publicacion SET faltan_planos=?, falta_escritura=?, observaciones_documentacion=? WHERE id_solicitud=?')->execute([$faltanPlanos,$faltaEscritura,$documentNotes!==''?$documentNotes:null,$request]);
             foreach ($groups as $field=>$type) {
                 $files=$_FILES[$field]??null; if (!$files) continue;
                 if (!is_array($files['name']??null)) throw new RuntimeException('Carga de documentos inválida.');
@@ -79,5 +91,6 @@ final class ExpedienteDAO
     public function link(int $request, int $property): void
     {
         foreach (['documentos','propiedad_impuestos'] as $table) $this->db->prepare("UPDATE $table SET id_propiedad=? WHERE id_solicitud=?")->execute([$property,$request]);
+        $this->db->prepare('UPDATE propiedades p JOIN solicitudes_publicacion s ON s.id_solicitud=? SET p.faltan_planos=s.faltan_planos,p.falta_escritura=s.falta_escritura,p.observaciones_documentacion=s.observaciones_documentacion WHERE p.id_propiedad=?')->execute([$request,$property]);
     }
 }

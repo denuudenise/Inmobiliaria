@@ -26,6 +26,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }));
   document.querySelectorAll('[data-gallery]').forEach(button=>button.addEventListener('click',()=>{byId('galleryMain').src=button.dataset.gallery;document.querySelectorAll('[data-gallery]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
   document.querySelectorAll('input[type="password"]').forEach(input=>{const button=document.createElement('button');button.type='button';button.className='password-toggle';button.textContent='Mostrar contraseña';button.setAttribute('aria-controls',input.id);button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>{const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Ocultar contraseña':'Mostrar contraseña';button.setAttribute('aria-pressed',String(show));});input.after(button);});
+  document.querySelectorAll('[data-accumulate-files]').forEach(input=>{
+    let selected=new DataTransfer();
+    const list=byId('selected-files-'+input.id)||document.querySelector(`[data-selected-files="${input.id}"]`);
+    const render=()=>{
+      if(!list)return;
+      list.replaceChildren();
+      [...selected.files].forEach((file,index)=>{
+        const item=document.createElement('li');
+        const name=document.createElement('span'); name.textContent=file.name;
+        const remove=document.createElement('button'); remove.type='button'; remove.textContent='Quitar'; remove.setAttribute('aria-label',`Quitar ${file.name}`);
+        remove.addEventListener('click',()=>{const next=new DataTransfer();[...selected.files].forEach((f,i)=>{if(i!==index)next.items.add(f)});selected=next;input.files=selected.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
+        item.append(name,remove);list.append(item);
+      });
+      if(selected.files.length){const count=document.createElement('li');count.className='file-count';count.textContent=`${selected.files.length} archivo${selected.files.length===1?'':'s'} seleccionado${selected.files.length===1?'':'s'}`;list.append(count)}
+    };
+    input.addEventListener('change',()=>{
+      const group=input.closest('.private-fields')||input.closest('.field');
+      const others=group?[...group.querySelectorAll('[data-accumulate-files]')].filter(other=>other!==input).reduce((sum,other)=>sum+other.files.length,0):0;
+      const limit=8;
+      const maxForInput=Math.max(0,limit-others);
+      const incoming=[...input.files];
+      let rejected=0;
+      incoming.forEach(file=>{const duplicate=[...selected.files].some(existing=>existing.name===file.name&&existing.size===file.size&&existing.lastModified===file.lastModified&&existing.type===file.type);if(duplicate)return;if(selected.files.length<maxForInput)selected.items.add(file);else rejected++});
+      input.files=selected.files;render();
+      if(list){const status=list.parentElement.querySelector('[data-file-limit-message]');if(status)status.remove();if(rejected){const note=document.createElement('small');note.dataset.fileLimitMessage='';note.textContent='El máximo es de 8 archivos.';list.after(note)}}
+    });
+    document.querySelector(`[data-add-files="${input.id}"]`)?.addEventListener('click',()=>input.click());
+  });
+  const missingDocs=[...document.querySelectorAll('[data-document-missing]')], documentNotes=document.querySelector('[data-document-notes]');
+  const syncDocumentNotes=()=>{if(documentNotes){const required=missingDocs.some(box=>box.checked);documentNotes.required=required;documentNotes.minLength=required?10:0;}};
+  missingDocs.forEach(box=>box.addEventListener('change',syncDocumentNotes));syncDocumentNotes();
   document.querySelectorAll('[data-print]').forEach(b=>b.addEventListener('click',()=>window.print()));
   document.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{if(!img.src.endsWith('/propiedad.svg'))img.src='/Inmobiliaria/recursos/imagenes/propiedad.svg';}));
   if(location.hash.startsWith('#solicitud-')){const target=byId(location.hash.slice(1));if(target)target.open=true;}

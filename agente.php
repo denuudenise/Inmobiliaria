@@ -315,14 +315,16 @@ $consults = query_rows(
             c.fecha,
             c.fecha_respuesta,
             p.titulo,
-            u.nombre,
-            u.apellido
+            COALESCE(c.nombre_contacto,u.nombre) AS nombre,
+            COALESCE(u.apellido,"") AS apellido,
+            COALESCE(c.email_contacto,u.email) AS email_contacto,
+            COALESCE(c.telefono_contacto,u.telefono) AS telefono_contacto
      FROM contactos c
      JOIN propiedades p ON p.id_propiedad=c.id_propiedad
-     JOIN usuarios u ON u.id_usuario=c.id_cliente
+     LEFT JOIN usuarios u ON u.id_usuario=c.id_cliente
      WHERE c.tipo="Consulta"
        AND (?=1 OR p.id_agente_creador=?)
-       AND (p.titulo LIKE ? OR u.nombre LIKE ?)
+       AND (p.titulo LIKE ? OR COALESCE(c.nombre_contacto,u.nombre) LIKE ?)
      ORDER BY c.estado="Pendiente" DESC, c.fecha DESC',
     [(int)$admin, $user['id'], $like, $like]
 );
@@ -688,7 +690,7 @@ function person_options(array $people, int $selected = 0): void
 
                                
                                 <?php $offerKind='propiedad'; $offerId=$id; require __DIR__.'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
-<?php require __DIR__.'/sistema/Vistas/Diseno/expediente-form.php'; ?>
+<?php $documentState=$p; require __DIR__.'/sistema/Vistas/Diseno/expediente-form.php'; ?>
 <div class="field full">
                                     <label for="fotos">Agregar fotos (hasta 8, máximo 2 MB cada una)</label>
                                     <input
@@ -780,6 +782,7 @@ function person_options(array $people, int $selected = 0): void
 
                             <div class="record-body">
                                 <p><?= nl2br(e($r['descripcion'])) ?></p>
+                                <?php if (!empty($r['faltan_planos']) || !empty($r['falta_escritura'])): ?><p class="notice"><strong>Documentación pendiente:</strong> <?= !empty($r['faltan_planos'])?'planos':'' ?><?= !empty($r['faltan_planos']) && !empty($r['falta_escritura'])?' y ':'' ?><?= !empty($r['falta_escritura'])?'escritura':'' ?>. <?php if (!empty($r['observaciones_documentacion'])): ?><?= e($r['observaciones_documentacion']) ?><?php endif; ?></p><?php endif; ?>
 
                                 <p>
                                     <?= e($r['direccion']) ?> ·
@@ -886,6 +889,7 @@ function person_options(array $people, int $selected = 0): void
 
                             <div class="record-body">
                                 <p><?= nl2br(e($c['mensaje'])) ?></p>
+                                <?php if (!empty($c['email_contacto']) || !empty($c['telefono_contacto'])): ?><p><strong>Contacto:</strong> <?= e($c['email_contacto'] ?? '') ?><?= !empty($c['email_contacto']) && !empty($c['telefono_contacto']) ? ' · ' : '' ?><?= e($c['telefono_contacto'] ?? '') ?></p><?php endif; ?>
 
                                 <?php if ($c['respuesta']): ?>
                                     <p class="notice"><?= nl2br(e($c['respuesta'])) ?></p>
