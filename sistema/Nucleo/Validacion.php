@@ -26,10 +26,10 @@ final class Validacion
 
     public static function direccion(string $value): bool
     {
-        $value=trim($value);
-        return mb_strlen($value)>=3 && mb_strlen($value)<=255
-            && preg_match('/[\\p{L}\\p{M}]/u',$value)===1
-            && preg_match("/^[\\p{L}\\p{M}\\p{N}\\s.,#º°/'-]+$/uD",$value)===1;
+        $value = trim($value);
+        return mb_strlen($value) >= 3 && mb_strlen($value) <= 255
+            && preg_match('/[\p{L}\p{M}]/u', $value) === 1
+            && preg_match("/^[\p{L}\p{M}\p{N}\s.,#º°\/\'-]+$/uD", $value) === 1;
     }
 
     public static function localidad(string $value): bool
