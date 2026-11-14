@@ -285,12 +285,15 @@ $props = query_rows(
             ev.nombre AS verificacion,
             ec.nombre AS estado,
             tp.nombre AS tipo,
+            ua.nombre AS agente_nombre,
+            ua.apellido AS agente_apellido,
             (SELECT GROUP_CONCAT(ot.nombre ORDER BY ot.id_tipo_transaccion SEPARATOR " · ") FROM propiedad_ofertas po JOIN tipos_transaccion ot ON ot.id_tipo_transaccion=po.id_tipo_transaccion WHERE po.id_propiedad=p.id_propiedad) AS operacion
      FROM propiedades p
      JOIN estados_verificacion ev ON ev.id_estado_verificacion=p.id_estado_verificacion
      JOIN estados_comerciales ec  ON ec.id_estado_comercial=p.id_estado_comercial
      JOIN tipos_propiedad tp      ON tp.id_tipo_propiedad=p.id_tipo_propiedad
      JOIN tipos_transaccion tt    ON tt.id_tipo_transaccion=p.id_tipo_transaccion
+     LEFT JOIN usuarios ua ON ua.id_usuario=p.id_agente_creador
      WHERE (?=1 OR p.id_agente_creador=?)
        AND (p.titulo LIKE ? OR p.localidad LIKE ?)
      ORDER BY p.fecha_creacion DESC',
@@ -893,6 +896,7 @@ function person_options(array $people, int $selected = 0): void
                                 <thead>
                                     <tr>
                                         <th>Propiedad</th>
+                                        <th>Agente responsable</th>
                                         <th>Precio</th>
                                         <th>Publicación</th>
                                         <th>Estado</th>
@@ -906,6 +910,7 @@ function person_options(array $people, int $selected = 0): void
                                                 <strong><?= e($p['titulo']) ?></strong><br>
                                                 <small><?= e($p['localidad']) ?></small>
                                             </td>
+                                            <td><?= $p['agente_nombre'] ? e(trim($p['agente_nombre'].' '.$p['agente_apellido'])) : '<span class="status amber">Sin asignar</span>' ?></td>
                                             <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?><?php if((int)$listedOffer['id_tipo_transaccion']===1 && !empty($listedOffer['precio_minimo'])): ?><small>Mínimo aceptado (interno): <?= e($listedOffer['moneda'].' '.number_format((float)$listedOffer['precio_minimo'],2,',','.')) ?></small><?php endif; ?></div><?php endforeach; ?></td>
                                             <td><?= e($p['verificacion']) ?></td>
                                             <td><?= e($p['estado']) ?></td><td><a class="text-link" href="/Inmobiliaria/ficha-privada.php?tipo=propiedad&amp;id=<?= (int)$p['id_propiedad'] ?>">Documentación e impuestos</a></td>
@@ -1120,8 +1125,13 @@ function person_options(array $people, int $selected = 0): void
                     'SELECT u.id_usuario,
                             u.nombre,
                             u.apellido,
+                            u.dni,
                             u.email,
                             u.telefono,
+                            u.direccion,
+                            u.localidad,
+                            u.fecha_nacimiento,
+                            u.genero,
                             u.id_rol,
                             u.activo,
                             r.nombre AS rol
@@ -1216,6 +1226,37 @@ function person_options(array $people, int $selected = 0): void
                     </p>
 
                     <?php foreach ($people as $person): ?>
+                        <?php
+                        $personAgents = [];
+                        $agentProperties = [];
+                        $agentClients = [];
+                        if ((int)$person['id_rol'] === 3) {
+                            $personAgents = query_rows(
+                                'SELECT DISTINCT a.id_usuario,a.nombre,a.apellido
+                                 FROM usuarios a
+                                 WHERE a.id_rol=2 AND (
+                                    EXISTS(SELECT 1 FROM contactos c WHERE c.id_cliente=? AND c.id_agente=a.id_usuario)
+                                    OR EXISTS(SELECT 1 FROM solicitudes_publicacion s WHERE s.id_cliente=? AND s.id_agente=a.id_usuario)
+                                    OR EXISTS(SELECT 1 FROM visitas v WHERE v.id_cliente=? AND v.id_agente=a.id_usuario)
+                                    OR EXISTS(SELECT 1 FROM tareas_seguimiento t WHERE t.id_cliente=? AND t.id_agente=a.id_usuario)
+                                    OR EXISTS(SELECT 1 FROM intereses i JOIN propiedades p ON p.id_propiedad=i.id_propiedad WHERE i.id_cliente=? AND p.id_agente_creador=a.id_usuario)
+                                    OR EXISTS(SELECT 1 FROM propiedades p WHERE p.id_propietario=? AND p.id_agente_creador=a.id_usuario)
+                                 ) ORDER BY a.nombre,a.apellido',
+                                array_fill(0, 6, (int)$person['id_usuario'])
+                            );
+                        } elseif ((int)$person['id_rol'] === 2) {
+                            $agentProperties = query_rows(
+                                'SELECT p.id_propiedad,p.titulo,p.localidad,ec.nombre AS estado
+                                 FROM propiedades p JOIN estados_comerciales ec ON ec.id_estado_comercial=p.id_estado_comercial
+                                 WHERE p.id_agente_creador=? ORDER BY p.fecha_creacion DESC',
+                                [(int)$person['id_usuario']]
+                            );
+                            $agentClients = (new SeguimientoDAO($db))->clientsFor(
+                                ['id' => (int)$person['id_usuario'], 'role' => 'Agente'],
+                                false
+                            );
+                        }
+                        ?>
                         <details class="record">
                             <summary>
                                 <span>
@@ -1228,9 +1269,36 @@ function person_options(array $people, int $selected = 0): void
                             </summary>
 
                             <div class="record-body">
-                                <p>Teléfono: <?= e($person['telefono'] ?: 'Sin informar') ?></p>
+                                <div class="person-info-grid">
+                                    <section class="person-info-card">
+                                        <h3>Datos personales</h3>
+                                        <dl class="person-data-list">
+                                            <div><dt>Correo</dt><dd><?= e($person['email']) ?></dd></div>
+                                            <div><dt>Teléfono</dt><dd><?= e($person['telefono'] ?: 'Sin informar') ?></dd></div>
+                                            <div><dt>DNI</dt><dd><?= e($person['dni'] ?: 'Sin informar') ?></dd></div>
+                                            <div><dt>Domicilio</dt><dd><?= e(trim(($person['direccion'] ?? '').', '.($person['localidad'] ?? ''), ', ') ?: 'Sin informar') ?></dd></div>
+                                            <div><dt>Fecha de nacimiento</dt><dd><?= e($person['fecha_nacimiento'] ? date('d/m/Y', strtotime($person['fecha_nacimiento'])) : 'Sin informar') ?></dd></div>
+                                            <div><dt>Género</dt><dd><?= e($person['genero'] ?: 'Sin informar') ?></dd></div>
+                                        </dl>
+                                        <a class="text-link" href="mailto:<?= e($person['email']) ?>">Enviar correo →</a>
+                                    </section>
 
-                                <a class="text-link" href="mailto:<?= e($person['email']) ?>">Enviar correo</a>
+                                    <?php if ((int)$person['id_rol'] === 3): ?>
+                                        <section class="person-info-card">
+                                            <h3>Agente<?= count($personAgents) === 1 ? ' vinculado' : 's vinculados' ?> <span><?= count($personAgents) ?></span></h3>
+                                            <?php if ($personAgents): ?><ul class="person-link-list"><?php foreach ($personAgents as $linkedAgent): ?><li><strong><?= e($linkedAgent['nombre'].' '.$linkedAgent['apellido']) ?></strong><small>Asesor por actividad registrada</small></li><?php endforeach; ?></ul><?php else: ?><p class="person-empty">Este cliente todavía no tiene un agente vinculado por consultas, solicitudes, visitas o propiedades.</p><?php endif; ?>
+                                        </section>
+                                    <?php elseif ((int)$person['id_rol'] === 2): ?>
+                                        <section class="person-info-card">
+                                            <h3>Propiedades a cargo <span><?= count($agentProperties) ?></span></h3>
+                                            <?php if ($agentProperties): ?><ul class="person-link-list"><?php foreach ($agentProperties as $managedProperty): ?><li><strong><?= e($managedProperty['titulo']) ?></strong><small><?= e($managedProperty['localidad'].' · '.$managedProperty['estado']) ?></small></li><?php endforeach; ?></ul><?php else: ?><p class="person-empty">Este agente todavía no tiene propiedades asignadas.</p><?php endif; ?>
+                                        </section>
+                                        <section class="person-info-card">
+                                            <h3>Clientes que asesora <span><?= count($agentClients) ?></span></h3>
+                                            <?php if ($agentClients): ?><ul class="person-link-list"><?php foreach ($agentClients as $advisedClient): ?><li><strong><?= e($advisedClient['nombre'].' '.$advisedClient['apellido']) ?></strong><small>Cliente vinculado por actividad</small></li><?php endforeach; ?></ul><?php else: ?><p class="person-empty">Este agente todavía no tiene clientes vinculados.</p><?php endif; ?>
+                                        </section>
+                                    <?php endif; ?>
+                                </div>
 
                                 <?php if ($section === 'usuarios' && (int)$person['id_usuario'] !== $user['id']): ?>
                                     <form method="post" class="toolbar">

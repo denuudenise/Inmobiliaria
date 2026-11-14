@@ -34,6 +34,34 @@
 .private-fields legend{font-weight:700;padding:0 8px;color:var(--navy)}
 .private-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:18px}
 .private-grid .field{min-width:0}.private-grid input,.private-grid select{width:100%;min-width:0}
+
+/* Registro en tres pasos. */
+.register-progress{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:0 0 20px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fcfbf8}
+.register-progress ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;list-style:none;margin:0;padding:0;flex:1}
+.register-progress li{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}
+.register-progress li>span{display:grid;place-items:center;width:29px;height:29px;flex:none;border:1px solid #d5dddc;border-radius:50%;background:white;font-size:10px;font-weight:700}
+.register-progress li.is-current{color:var(--navy);font-weight:700}.register-progress li.is-current>span{border-color:var(--blue);background:var(--blue);color:white;box-shadow:0 0 0 3px #317a9e18}
+.register-progress li.is-complete>span{border-color:#77a995;background:#e9f4ef;color:#36745f}
+.register-step-count{margin:0;color:var(--muted);font-size:11px;white-space:nowrap}.register-step-count strong{color:var(--navy)}
+.register-step[hidden]{display:none}.register-step{animation:register-step-in .18s ease-out}
+.register-step-actions{display:flex;justify-content:space-between;gap:12px;margin-top:24px;padding-top:17px;border-top:1px solid var(--line)}
+.register-step-actions .btn{min-width:155px}.register-required-note{margin:11px 0 0;color:var(--muted);font-size:11px}.register-required-note i{font-style:normal;color:#c15d4b}
+@keyframes register-step-in{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:620px){.register-progress{align-items:stretch;flex-direction:column}.register-progress ol{gap:6px}.register-progress li{align-items:flex-start;flex-direction:column;font-size:9px}.register-progress li>span{width:27px;height:27px}.register-step-actions .btn{min-width:0;flex:1;padding:11px 12px}}
+
+/* Fichas de usuarios, clientes y agentes en el panel administrativo. */
+.person-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;align-items:stretch;margin:4px 0 18px}
+.person-info-card{min-width:0;padding:17px 18px;border:1px solid var(--line);border-radius:12px;background:#fffefa}
+.person-info-card h3{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 13px;font:600 16px 'DM Sans',sans-serif;color:var(--navy)}
+.person-info-card h3>span{display:grid;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:20px;background:#eaf1f3;color:var(--blue);font:700 11px 'DM Sans',sans-serif}
+.person-data-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 16px;margin:0 0 14px}
+.person-data-list>div{min-width:0}.person-data-list dt{margin-bottom:3px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em}.person-data-list dd{margin:0;color:var(--ink);font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.person-link-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px;list-style:none;margin:0;padding:0}
+.person-link-list li{min-width:0;padding:10px 11px;border:1px solid #e9e7df;border-radius:9px;background:#fcfbf8}
+.person-link-list li strong,.person-link-list li small{display:block;overflow-wrap:anywhere}.person-link-list li strong{color:#284457;font-size:12px}.person-link-list li small{margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}
+.person-empty{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.record-body>.person-info-grid+.toolbar{margin-top:0}
+@media(max-width:620px){.person-info-grid{grid-template-columns:1fr;gap:10px}.person-data-list{gap:11px}.person-info-card{padding:14px}}
 .private-documents{padding-left:20px;overflow-wrap:anywhere}.private-documents li{margin:14px 0}
 .private-page .content-card{margin-bottom:20px}.private-page output{display:block;padding:12px;background:#edf4f6;border-radius:8px;font-weight:700}
 .form-grid .field{min-width:0}.form-grid .field label{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.5;min-height:24px;font-size:14px}

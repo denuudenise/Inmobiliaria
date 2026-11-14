@@ -9,6 +9,11 @@ if (current_user()) {
 
 $errorMessage = '';
 $fieldErrors = [];
+$registerSteps = [
+    1 => ['nombre', 'apellido', 'dni', 'fecha_nacimiento', 'genero'],
+    2 => ['email', 'telefono', 'direccion', 'localidad'],
+    3 => ['password', 'password_confirm'],
+];
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -103,9 +108,19 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="register-alert" role="alert"><span class="register-alert-icon">!</span><span><?= e($errorMessage) ?></span></div>
         <?php endif; ?>
 
-        <form method="post" class="register-form" id="registro-form" novalidate>
+        <form method="post" class="register-form" id="registro-form" novalidate data-start-step="<?= e((string)(array_key_first(array_filter($registerSteps, static fn(array $fields): bool => (bool)array_intersect($fields, array_keys($fieldErrors)))) ?: 1)) ?>">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
+            <nav class="register-progress" aria-label="Pasos del registro">
+                <ol>
+                    <li><span>01</span><small>Datos personales</small></li>
+                    <li><span>02</span><small>Contacto y domicilio</small></li>
+                    <li><span>03</span><small>Seguridad</small></li>
+                </ol>
+                <p class="register-step-count" aria-live="polite">Paso <strong id="registro-paso-actual">1</strong> de 3</p>
+            </nav>
+
+            <section class="register-step" data-step="1" aria-label="Paso 1: datos personales">
             <h2 class="register-section-title"><span>01</span> Datos personales</h2>
             <div class="register-fields">
                 <div class="field<?= isset($fieldErrors['nombre'])?' has-error':'' ?>"><label for="nombre">Nombre <i>*</i></label><input id="nombre" name="nombre" type="text" minlength="2" maxlength="100" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,100}" value="<?= e((string)($_POST['nombre'] ?? '')) ?>" autocomplete="given-name" required aria-invalid="<?= isset($fieldErrors['nombre'])?'true':'false' ?>" aria-describedby="ayuda-nombre"><small class="field-feedback" id="ayuda-nombre" aria-live="polite"><?= e($fieldErrors['nombre'] ?? '') ?></small></div>
@@ -114,7 +129,10 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <div class="field<?= isset($fieldErrors['fecha_nacimiento'])?' has-error':'' ?>"><label for="fecha_nacimiento">Fecha de nacimiento <i>*</i></label><input id="fecha_nacimiento" name="fecha_nacimiento" type="date" max="<?= e(date('Y-m-d')) ?>" value="<?= e((string)($_POST['fecha_nacimiento'] ?? '')) ?>" autocomplete="bday" required aria-invalid="<?= isset($fieldErrors['fecha_nacimiento'])?'true':'false' ?>" aria-describedby="ayuda-fecha_nacimiento"><small class="field-feedback" id="ayuda-fecha_nacimiento" aria-live="polite"><?= e($fieldErrors['fecha_nacimiento'] ?? '') ?></small></div>
                 <div class="field<?= isset($fieldErrors['genero'])?' has-error':'' ?>"><label for="genero">Género <i>*</i></label><select id="genero" name="genero" required aria-invalid="<?= isset($fieldErrors['genero'])?'true':'false' ?>" aria-describedby="ayuda-genero"><option value="">Seleccioná una opción</option><?php foreach (['Femenino','Masculino','No binario','Otro','Prefiero no decirlo'] as $genderOption): ?><option value="<?= e($genderOption) ?>" <?= (($_POST['genero'] ?? '') === $genderOption) ? 'selected' : '' ?>><?= e($genderOption) ?></option><?php endforeach; ?></select><small class="field-feedback" id="ayuda-genero" aria-live="polite"><?= e($fieldErrors['genero'] ?? '') ?></small></div>
             </div>
+            <div class="register-step-actions"><span></span><button class="btn" type="button" data-next>Paso siguiente <span aria-hidden="true">→</span></button></div>
+            </section>
 
+            <section class="register-step" data-step="2" aria-label="Paso 2: contacto y domicilio">
             <h2 class="register-section-title"><span>02</span> Contacto y domicilio</h2>
             <div class="register-fields">
                 <div class="field<?= isset($fieldErrors['email'])?' has-error':'' ?>"><label for="email">Correo electrónico <i>*</i></label><input id="email" name="email" type="email" maxlength="150" value="<?= e((string)($_POST['email'] ?? '')) ?>" autocomplete="email" required aria-invalid="<?= isset($fieldErrors['email'])?'true':'false' ?>" aria-describedby="ayuda-email"><small class="field-feedback" id="ayuda-email" aria-live="polite"><?= e($fieldErrors['email'] ?? '') ?></small></div>
@@ -122,14 +140,19 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <div class="field<?= isset($fieldErrors['direccion'])?' has-error':'' ?>"><label for="direccion">Dirección <i>*</i></label><input id="direccion" name="direccion" type="text" minlength="3" maxlength="255" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ .,#º°/'-]{3,255}" value="<?= e((string)($_POST['direccion'] ?? '')) ?>" autocomplete="street-address" required aria-invalid="<?= isset($fieldErrors['direccion'])?'true':'false' ?>" aria-describedby="ayuda-direccion"><small class="field-feedback" id="ayuda-direccion" aria-live="polite"><?= e($fieldErrors['direccion'] ?? '') ?></small></div>
                 <div class="field<?= isset($fieldErrors['localidad'])?' has-error':'' ?>"><label for="localidad">Localidad <i>*</i></label><input id="localidad" name="localidad" type="text" minlength="2" maxlength="100" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ .,'-]{2,100}" value="<?= e((string)($_POST['localidad'] ?? '')) ?>" autocomplete="address-level2" required aria-invalid="<?= isset($fieldErrors['localidad'])?'true':'false' ?>" aria-describedby="ayuda-localidad"><small class="field-feedback" id="ayuda-localidad" aria-live="polite"><?= e($fieldErrors['localidad'] ?? '') ?></small></div>
             </div>
+            <div class="register-step-actions"><button class="btn btn-outline" type="button" data-back>← Anterior</button><button class="btn" type="button" data-next>Paso siguiente <span aria-hidden="true">→</span></button></div>
+            </section>
 
+            <section class="register-step" data-step="3" aria-label="Paso 3: seguridad de la cuenta">
             <h2 class="register-section-title"><span>03</span> Seguridad de la cuenta</h2>
             <div class="register-fields">
                 <div class="field<?= isset($fieldErrors['password'])?' has-error':'' ?>"><label for="password">Contraseña <i>*</i></label><input id="password" name="password" type="password" minlength="8" maxlength="255" required autocomplete="new-password" aria-invalid="<?= isset($fieldErrors['password'])?'true':'false' ?>" aria-describedby="ayuda-password"><small class="field-feedback" id="ayuda-password" aria-live="polite"><?= e($fieldErrors['password'] ?? '') ?></small><ul class="password-rules" id="password-rules"><li data-rule="length">8 caracteres o más</li><li data-rule="letter-number">Una letra y un número</li><li data-rule="symbol">Un símbolo, por ejemplo ! o #</li></ul></div>
                 <div class="field<?= isset($fieldErrors['password_confirm'])?' has-error':'' ?>"><label for="password_confirm">Confirmar contraseña <i>*</i></label><input id="password_confirm" name="password_confirm" type="password" minlength="8" maxlength="255" required autocomplete="new-password" aria-invalid="<?= isset($fieldErrors['password_confirm'])?'true':'false' ?>" aria-describedby="ayuda-password_confirm"><small class="field-feedback" id="ayuda-password_confirm" aria-live="polite"><?= e($fieldErrors['password_confirm'] ?? '') ?></small></div>
             </div>
 
-            <div class="register-submit"><span><i>*</i> Campos obligatorios</span><button class="btn" type="submit">Crear mi cuenta <span aria-hidden="true">→</span></button></div>
+            <div class="register-step-actions"><button class="btn btn-outline" type="button" data-back>← Anterior</button><button class="btn" type="submit">Crear mi cuenta <span aria-hidden="true">→</span></button></div>
+            <p class="register-required-note"><i>*</i> Campos obligatorios</p>
+            </section>
         </form>
 
         <p class="register-login">¿Ya tenés una cuenta? <a class="text-link" href="/Inmobiliaria/login.php">Iniciá sesión</a></p>
@@ -141,7 +164,10 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
     const form = document.getElementById('registro-form');
     if (!form) return;
     const controls = [...form.querySelectorAll('input:not([type="hidden"])[name], select[name]')];
+    const steps = [...form.querySelectorAll('[data-step]')];
+    const stepIndicator = document.getElementById('registro-paso-actual');
     let submitted = false;
+    let currentStep = Number(form.dataset.startStep || 1);
     const messages = {
         nombre: 'Ingresá un nombre de 2 a 100 letras, sin números.',
         apellido: 'Ingresá un apellido de 2 a 100 letras, sin números.',
@@ -211,6 +237,35 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
         };
         for (const [name, ok] of Object.entries(rules)) document.querySelector(`#password-rules [data-rule="${name}"]`)?.classList.toggle('passed', ok);
     }
+    function showStep(number) {
+        currentStep = Math.min(Math.max(number, 1), steps.length);
+        steps.forEach(step => {
+            const active = Number(step.dataset.step) === currentStep;
+            step.hidden = !active;
+            step.classList.toggle('is-current', active);
+        });
+        form.querySelectorAll('.register-progress li').forEach((item, index) => {
+            item.classList.toggle('is-current', index + 1 === currentStep);
+            item.classList.toggle('is-complete', index + 1 < currentStep);
+            if (index + 1 === currentStep) item.setAttribute('aria-current', 'step');
+            else item.removeAttribute('aria-current');
+        });
+        if (stepIndicator) stepIndicator.textContent = String(currentStep);
+    }
+    function validateStep(number) {
+        const stepControls = controls.filter(el => Number(el.closest('[data-step]')?.dataset.step) === number);
+        const invalid = stepControls.filter(el => !validate(el, true));
+        if (invalid.length) {
+            invalid[0].focus();
+            invalid[0].reportValidity();
+            return false;
+        }
+        return true;
+    }
+    form.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => {
+        if (validateStep(currentStep)) showStep(currentStep + 1);
+    }));
+    form.querySelectorAll('[data-back]').forEach(button => button.addEventListener('click', () => showStep(currentStep - 1)));
     controls.forEach(el => {
         if (el.getAttribute('aria-invalid') === 'true') el.dataset.touched = 'true';
         const feedback = document.getElementById(`ayuda-${el.name}`);
@@ -228,8 +283,15 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
     form.addEventListener('submit', event => {
         submitted = true;
         const invalid = controls.filter(el => !validate(el, true));
-        if (invalid.length) { event.preventDefault(); invalid[0].focus(); invalid[0].reportValidity(); }
+        if (invalid.length) {
+            event.preventDefault();
+            const invalidStep = Number(invalid[0].closest('[data-step]')?.dataset.step || 1);
+            showStep(invalidStep);
+            invalid[0].focus();
+            invalid[0].reportValidity();
+        }
     });
+    showStep(currentStep);
     updatePasswordRules();
 })();
 </script>
