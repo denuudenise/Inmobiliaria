@@ -31,3 +31,7 @@ Después de importar el esquema de la base de datos, ejecutar `007_documentacion
 Después de la migración 005, ejecutar `008_precio_minimo_venta.sql`. Agrega el monto mínimo que acepta el propietario para la venta. Debe ser mayor a cero y no superar el precio de venta publicado; se guarda con la misma moneda. Solo se muestra en los paneles del agente y del administrador, nunca en el catálogo ni en el detalle público.
 
 Los cierres eligen una oferta concreta. La venta y el alquiler conservan su propia moneda y tipo de operación. Una operación cerrada retira la propiedad del catálogo según los estados comerciales existentes.
+
+## Normalización del volcado compartido
+
+Después de importar `inmobiliaria (1).sql`, se puede ejecutar `009_ajuste_registros_catalogo.sql`. Sincroniza el estado de las publicaciones con el estado de verificación, marca como pendiente la documentación que no figura asociada a las propiedades, completa una oferta principal solo si falta y equilibra las propiedades aprobadas y disponibles entre los siete agentes activos del volcado. También retira del catálogo, sin borrar sus registros, las dos fichas de prueba claramente incompletas (propiedades 15 y 48). No modifica operaciones cerradas ni inventa montos mínimos. Hacer un respaldo antes de aplicar este ajuste.

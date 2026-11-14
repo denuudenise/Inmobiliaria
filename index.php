@@ -175,19 +175,19 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     <div class="property-info">
                         <h3><?= e($property['titulo']) ?></h3>
 
-                        <div class="property-place">⌖ &nbsp;<?= e($property['localidad']) ?></div>
+                        <div class="property-place"><span aria-hidden="true">⌖</span> <?= e($property['localidad']) ?></div>
 
                         <div class="property-features">
-                            <span>▱ &nbsp;<?= e((string)($property['ambientes'] ?? '—')) ?> amb.</span>
-                            <span>♧ &nbsp;<?= e((string)($property['dormitorios'] ?? '—')) ?> dorm.</span>
-                            <span>▣ &nbsp;<?= e((string)$property['superficie_total_m2']) ?> m²</span>
+                            <span><strong><?= e((string)($property['ambientes'] ?? '—')) ?></strong> ambientes</span>
+                            <span><strong><?= e((string)($property['dormitorios'] ?? '—')) ?></strong> dormitorios</span>
+                            <span><strong><?= e((string)$property['superficie_total_m2']) ?></strong> m²</span>
                         </div>
 
-                        <div class="offer-summary">
-<?php foreach ($property['ofertas'] as $offer): ?><p><strong><?= e($offer['nombre']) ?>:</strong> <?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' / mes':'' ?></p><?php endforeach; ?>
+                        <div class="offer-summary property-card-offers">
+<?php foreach ($property['ofertas'] as $offer): ?><p><strong><?= e($offer['nombre']) ?></strong><span class="property-offer-price"><?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' <small>/ mes</small>':'' ?></span></p><?php endforeach; ?>
 </div>
 
-                        <a class="btn" style="display:block;text-align:center" href="/Inmobiliaria/propiedad.php?id=<?= $id ?>">
+                        <a class="btn property-card-link" href="/Inmobiliaria/propiedad.php?id=<?= $id ?>">
                             Ver detalle
                         </a>
                     </div>

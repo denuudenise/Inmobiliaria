@@ -471,7 +471,7 @@ function person_options(array $people, int $selected = 0): void
                     <!-- Fila 1: KPIs Principales -->
                     <div class="agent-kpis" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
                         <a class="agent-kpi" href="?seccion=clientes">
-                            <div class="kpi-icon blue">👥</div>
+                            <div class="kpi-icon blue kpi-icon-text" aria-hidden="true">CL</div>
                             <div>
                                 <small>Clientes registrados</small>
                                 <strong><?= $totalClientes ?></strong>
@@ -479,7 +479,7 @@ function person_options(array $people, int $selected = 0): void
                         </a>
 
                         <a class="agent-kpi" href="?seccion=solicitudes">
-                            <div class="kpi-icon amber">📄</div>
+                            <div class="kpi-icon amber kpi-icon-text" aria-hidden="true">SOL</div>
                             <div>
                                 <small>Solicitudes de propiedades</small>
                                 <strong><?= $totalSolicitudes ?></strong>
@@ -487,7 +487,7 @@ function person_options(array $people, int $selected = 0): void
                         </a>
 
                         <a class="agent-kpi" href="?seccion=operaciones">
-                            <div class="kpi-icon green">💲</div>
+                            <div class="kpi-icon green kpi-icon-text" aria-hidden="true">VEN</div>
                             <div>
                                 <small>Ventas realizadas</small>
                                 <strong><?= $ventasTotales ?></strong>
@@ -495,7 +495,7 @@ function person_options(array $people, int $selected = 0): void
                         </a>
 
                         <a class="agent-kpi" href="?seccion=operaciones">
-                            <div class="kpi-icon blue">🏠</div>
+                            <div class="kpi-icon blue kpi-icon-text" aria-hidden="true">ALQ</div>
                             <div>
                                 <small>Alquileres activos</small>
                                 <strong><?= $alquileresActivos ?></strong>

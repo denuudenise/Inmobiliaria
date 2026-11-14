@@ -33,6 +33,7 @@ final class PropiedadDAO
             'SELECT p.id_propiedad, p.titulo, p.direccion, p.localidad, p.precio, p.moneda,
                     p.descripcion, p.superficie_total_m2, p.superficie_cubierta_m2,
                     p.antiguedad_anos, p.ambientes, p.dormitorios, p.banos,
+                    p.piso, p.departamento_numero, p.numero_unidad, p.expensas, p.apto_profesional,
                     tp.nombre AS tipo, tt.nombre AS operacion
              FROM propiedades p
              INNER JOIN tipos_propiedad tp ON tp.id_tipo_propiedad = p.id_tipo_propiedad

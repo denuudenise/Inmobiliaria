@@ -126,8 +126,8 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <h1><?= e($property['titulo']) ?></h1>
                 <p><?= e($property['localidad']) ?></p>
 
-                <div class="offer-summary">
-<?php foreach ((new OfertaDAO(Database::connection()))->read('propiedad',$id) as $offer): ?><p><strong><?= e($offer['nombre']) ?>:</strong> <?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' / mes':'' ?></p><?php endforeach; ?>
+                <div class="offer-summary property-detail-offers">
+<?php foreach ((new OfertaDAO(Database::connection()))->read('propiedad',$id) as $offer): ?><p><strong><?= e($offer['nombre']) ?></strong><span class="property-offer-price"><?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' <small>/ mes</small>':'' ?></span></p><?php endforeach; ?>
 </div>
 
                 <dl class="features">
@@ -169,12 +169,13 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
         <div class="detail-lower">
 
            
-            <div class="content-card">
+            <div class="content-card property-description-card">
                 <h2>Sobre esta propiedad</h2>
 
                 <p class="description"><?= nl2br(e($property['descripcion'])) ?></p>
 
                 <?php
+                $propertyOffers = (new OfertaDAO(Database::connection()))->read('propiedad', $id);
                 $features = query_rows(
                     'SELECT c.nombre
                      FROM propiedad_caracteristicas pc
@@ -183,33 +184,50 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     [$id]
                 );
 
-                if ($features):
                 ?>
+
+                <section class="property-data-section">
+                    <h3>Detalles básicos</h3>
+                    <dl class="property-data-grid">
+                        <div><dt>Tipo de propiedad</dt><dd><?= e($property['tipo']) ?></dd></div>
+                        <div><dt>Tipo de listado</dt><dd><?= e(implode(' · ', array_column($propertyOffers, 'nombre')) ?: $property['operacion']) ?></dd></div>
+                        <div><dt>ID del listado</dt><dd>#<?= (int)$property['id_propiedad'] ?></dd></div>
+                        <div><dt>Precio</dt><dd class="property-data-prices"><?php foreach ($propertyOffers as $offer): ?><span><?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' <small>/ mes</small>':'' ?></span><?php endforeach; ?></dd></div>
+                        <?php if ($property['ambientes'] !== null): ?><div><dt>Ambientes</dt><dd><?= (int)$property['ambientes'] ?></dd></div><?php endif; ?>
+                        <?php if ($property['dormitorios'] !== null): ?><div><dt>Habitaciones</dt><dd><?= (int)$property['dormitorios'] ?></dd></div><?php endif; ?>
+                        <?php if ($property['banos'] !== null): ?><div><dt>Baños</dt><dd><?= (int)$property['banos'] ?></dd></div><?php endif; ?>
+                        <div><dt>Superficie total</dt><dd><?= e((string)$property['superficie_total_m2']) ?> m²</dd></div>
+                        <?php if ($property['superficie_cubierta_m2'] !== null): ?><div><dt>Superficie cubierta</dt><dd><?= e((string)$property['superficie_cubierta_m2']) ?> m²</dd></div><?php endif; ?>
+                        <?php if ((int)$property['antiguedad_anos'] > 0): ?><div><dt>Antigüedad</dt><dd><?= (int)$property['antiguedad_anos'] ?> años</dd></div><?php endif; ?>
+                        <?php if ($property['piso'] !== null && trim((string)$property['piso']) !== ''): ?><div><dt>Piso</dt><dd><?= e($property['piso']) ?></dd></div><?php endif; ?>
+                        <?php if ($property['departamento_numero'] !== null && trim((string)$property['departamento_numero']) !== ''): ?><div><dt>Departamento</dt><dd><?= e($property['departamento_numero']) ?></dd></div><?php endif; ?>
+                        <?php if ($property['numero_unidad'] !== null && trim((string)$property['numero_unidad']) !== ''): ?><div><dt>Unidad</dt><dd><?= e($property['numero_unidad']) ?></dd></div><?php endif; ?>
+                        <?php if ((float)($property['expensas'] ?? 0) > 0): ?><div><dt>Expensas</dt><dd><?= e($property['moneda'].' '.number_format((float)$property['expensas'],2,',','.')) ?></dd></div><?php endif; ?>
+                        <?php if ((int)$property['apto_profesional'] === 1): ?><div><dt>Uso profesional</dt><dd>Apto profesional</dd></div><?php endif; ?>
+                    </dl>
+                </section>
+
+                <section class="property-data-section">
                     <h3>Características</h3>
+                    <?php if ($features): ?>
+                        <ul class="property-feature-list">
+                            <?php foreach ($features as $f): ?><li><?= e($f['nombre']) ?></li><?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <p class="property-data-empty">No se cargaron características adicionales.</p>
+                    <?php endif; ?>
+                </section>
 
-                    <div class="actions">
-                        <?php foreach ($features as $f): ?>
-                            <span class="status"><?= e($f['nombre']) ?></span>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <details class="record">
-                    <summary>Ubicación y otros datos</summary>
-
-                    <div class="record-body">
-                        <p><?= e($property['direccion'] . ', ' . $property['localidad']) ?></p>
-
-                        <p>Antigüedad: <?= (int)$property['antiguedad_anos'] ?> años</p>
-
-                        <a
-                            class="text-link"
-                            target="_blank"
-                            rel="noopener"
-                            href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($property['direccion'] . ', ' . $property['localidad'] . ', Argentina') ?>"
-                        >Ver ubicación en el mapa ↗</a>
-                    </div>
-                </details>
+                <section class="property-data-section property-location-section">
+                    <h3>Ubicación</h3>
+                    <p><strong><?= e($property['direccion']) ?></strong><br><?= e($property['localidad']) ?></p>
+                    <a
+                        class="text-link"
+                        target="_blank"
+                        rel="noopener"
+                        href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($property['direccion'] . ', ' . $property['localidad'] . ', Argentina') ?>"
+                    >Ver ubicación en el mapa ↗</a>
+                </section>
             </div>
 
 
