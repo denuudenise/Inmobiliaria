@@ -16,9 +16,13 @@ final class PropiedadDAO
         if (!empty($filters['currency']) && in_array($filters['currency'],['ARS','USD'],true)) { $offerWhere[]='o.moneda=?';$offerParams[]=$filters['currency']; }
         if (isset($filters['max_price']) && is_numeric($filters['max_price']) && (float)$filters['max_price']>0) { $offerWhere[]='o.precio<=?';$offerParams[]=$filters['max_price']; }
         $where[]='EXISTS (SELECT 1 FROM propiedad_ofertas o JOIN tipos_transaccion t ON t.id_tipo_transaccion=o.id_tipo_transaccion WHERE '.implode(' AND ',$offerWhere).')';
-        $sql='SELECT p.*,tp.nombre AS tipo,(SELECT url_archivo FROM propiedad_multimedia pm WHERE pm.id_propiedad=p.id_propiedad AND pm.tipo="Imagen" ORDER BY pm.orden,pm.id_multimedia LIMIT 1) AS imagen FROM propiedades p JOIN tipos_propiedad tp ON tp.id_tipo_propiedad=p.id_tipo_propiedad WHERE '.implode(' AND ',$where).' ORDER BY p.fecha_creacion DESC LIMIT '.max(1,min($limit,100));
+        $sql='SELECT p.*,tp.nombre AS tipo FROM propiedades p JOIN tipos_propiedad tp ON tp.id_tipo_propiedad=p.id_tipo_propiedad WHERE '.implode(' AND ',$where).' ORDER BY p.fecha_creacion DESC LIMIT '.max(1,min($limit,100));
         $q=$this->db->prepare($sql);$q->execute([...$params,...$offerParams]);$rows=$q->fetchAll();
         foreach($rows as &$row){
+            $row['imagen']='';
+            foreach($this->findImages((int)$row['id_propiedad']) as $media){
+                if($media['tipo']==='Imagen' && Archivos::isLocalFile((string)$media['url_archivo'])){$row['imagen']=$media['url_archivo'];break;}
+            }
             $row['ofertas']=array_values(array_filter((new OfertaDAO($this->db))->read('propiedad',(int)$row['id_propiedad']),static function($o)use($filters){
                 return (empty($filters['operation'])||$o['nombre']===$filters['operation']) && (empty($filters['currency'])||!in_array($filters['currency'],['ARS','USD'],true)||$o['moneda']===$filters['currency']) && (!isset($filters['max_price'])||!is_numeric($filters['max_price'])||(float)$filters['max_price']<=0||(float)$o['precio']<=(float)$filters['max_price']);
             }));

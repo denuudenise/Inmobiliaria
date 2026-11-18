@@ -19,7 +19,7 @@ final class AuditoriaDAO
         return $eventId;
     }
 
-    // Agregamos este método para que administrador.php pueda obtener los registros de auditoría
+    // Agregamos este método para que administrador pueda obtener los registros de auditoría
     public function auditLog(int $limit = 50): array
     {
         $stmt = $this->db->prepare('
