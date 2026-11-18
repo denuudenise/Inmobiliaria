@@ -66,71 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       
         $uploadedFiles = [];
-        $targetDirectory = dirname(__DIR__) . '/archivos/solicitudes';
-
-        if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0750, true) && !is_dir($targetDirectory)) {
-            $errorMessage = 'No se pudo preparar el espacio para los archivos. Revisá los permisos de uploads/.';
-        }
-
-        $mimeExtensions = [
-            'image/jpeg' => ['jpg', 'Imagen'],
-            'image/png'  => ['png', 'Imagen'],
-            'image/webp' => ['webp', 'Imagen'],
-            'video/mp4'  => ['mp4', 'Video'],
-            'video/webm' => ['webm', 'Video'],
-        ];
-
-        if ($errorMessage === '' && isset($_FILES['multimedia']) && is_array($_FILES['multimedia']['name'])) {
-            $fileCount = count($_FILES['multimedia']['name']);
-
-            if ($fileCount > 8) {
-                $errorMessage = 'Podés adjuntar hasta 8 archivos por solicitud.';
-                $fieldErrors['multimedia']=$errorMessage;
-
-            } else {
-                $finfo = new finfo(FILEINFO_MIME_TYPE);
-
-                for ($i = 0; $i < $fileCount; $i++) {
-                    $uploadError = (int)$_FILES['multimedia']['error'][$i];
-
-                    if ($uploadError === UPLOAD_ERR_NO_FILE) {
-                        continue;
-                    }
-
-                    if ($uploadError !== UPLOAD_ERR_OK || (int)$_FILES['multimedia']['size'][$i] > 2 * 1024 * 1024) {
-                        $errorMessage = 'Cada archivo debe pesar hasta 2 MB y cargarse correctamente.';
-                        $fieldErrors['multimedia']=$errorMessage;
-                        break;
-                    }
-
-                    $tmp = (string)$_FILES['multimedia']['tmp_name'][$i];
-                    $mime = $finfo->file($tmp) ?: '';
-
-                    if (!isset($mimeExtensions[$mime]) || !is_uploaded_file($tmp)) {
-                        $errorMessage = 'Formato de archivo no permitido. Usá JPG, PNG, WEBP, MP4 o WEBM.';
-                        $fieldErrors['multimedia']=$errorMessage;
-                        break;
-                    }
-
-                    [$extension, $mediaType] = $mimeExtensions[$mime];
-
-                    $fileName = bin2hex(random_bytes(18)) . '.' . $extension;
-                    $destination = $targetDirectory . '/' . $fileName;
-
-                    if (!move_uploaded_file($tmp, $destination)) {
-                        $errorMessage = 'No se pudo guardar uno de los archivos.';
-                        $fieldErrors['multimedia']=$errorMessage;
-                        break;
-                    }
-
-                    $uploadedFiles[] = [
-                        'path' => '/Inmobiliaria/archivos/solicitudes/' . $fileName,
-                        'type' => $mediaType,
-                        'disk' => $destination,
-                    ];
-                }
-            }
-        }
+        try {
+            $imagePaths=Archivos::images('fotos');
+            foreach($imagePaths as $path)$uploadedFiles[]=['path'=>$path,'type'=>'Imagen','disk'=>dirname(__DIR__).substr($path,strlen('/Inmobiliaria'))];
+            if(count($imagePaths)>8)throw new RuntimeException('Podés adjuntar hasta ocho fotos por solicitud.');
+            $videoPath=Archivos::video('video');
+            if($videoPath)$uploadedFiles[]=['path'=>$videoPath,'type'=>'Video','disk'=>dirname(__DIR__).substr($videoPath,strlen('/Inmobiliaria'))];
+        } catch(RuntimeException $uploadError) {$errorMessage=$uploadError->getMessage();$fieldErrors['multimedia']=$errorMessage;}
 
         
         if ($errorMessage === '') {
@@ -426,26 +368,14 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                      
                         <?php require dirname(__DIR__).'/sistema/Vistas/Diseno/expediente-form.php'; ?>
 <?php $offerKind='solicitud'; $offerId=0; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
-<div class="field full<?= isset($fieldErrors['multimedia'])?' has-error':'' ?>">
-                            <label for="multimedia">Fotos y videos (hasta 8 archivos en total, 2 MB cada uno)</label>
-
-                            <div class="file-drop">
-                                ↑<br>
-                                <strong>Adjuntá fotos o videos</strong>
-                                <div class="help-text">Formatos permitidos: JPG, PNG, WEBP, MP4 y WEBM</div>
-                                <input
-                                    id="multimedia"
-                                    name="multimedia[]"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
-                                    multiple
-                                    data-accumulate-files
-                                >
-                                <button class="btn btn-outline" type="button" data-add-files="multimedia">＋ Agregar más archivos</button>
-                                <ul class="selected-files" data-selected-files="multimedia" aria-live="polite"></ul>
-                                <small class="field-feedback field-error" id="ayuda-multimedia" aria-live="polite"><?= e($fieldErrors['multimedia']??'') ?></small>
-                            </div>
-                        </div>
+<div class="field full media-manager<?= isset($fieldErrors['multimedia'])?' has-error':'' ?>" data-media-manager>
+    <h3>Fotos y video de la propiedad</h3>
+    <p class="help-text">La primera foto será la portada. Después ordená los ambientes principales y dejá para el final los detalles y exteriores. Podés mover las miniaturas con las flechas y revisar la vista previa antes de enviar.</p>
+    <ol class="media-sort-list" data-sort-list></ol><input type="hidden" name="orden_fotos" value="" data-order-value>
+    <label for="fotos">Fotos (JPG, PNG o WEBP; hasta 8 por carga, 2 MB cada una)</label><input id="fotos" name="fotos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-new-photos>
+    <small class="field-feedback field-error" id="ayuda-multimedia" aria-live="polite"><?= e($fieldErrors['multimedia']??'') ?></small>
+    <div class="media-video-box"><label for="video">Video opcional (MP4, hasta 20 MB)</label><input id="video" name="video" type="file" accept="video/mp4" data-property-video></div>
+</div>
 
                        
                         <div class="field full<?= isset($fieldErrors['declaracion'])?' has-error':'' ?>">

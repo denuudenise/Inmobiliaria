@@ -113,15 +113,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function validateMedia() {
-    const input=form.querySelector('[name="multimedia[]"]');
+    const input=form.querySelector('[name="fotos[]"]');
+    const video=form.querySelector('[name="video"]');
     const feedback=document.getElementById('ayuda-multimedia');
     const field=input?.closest('.field');
     if(!input)return true;
     const files=[...input.files];
     let message='';
-    if(files.length>8)message='Podés adjuntar hasta 8 fotos o videos.';
-    else if(files.some(file=>file.size<=0||file.size>2*1024*1024))message='Cada foto o video debe pesar hasta 2 MB.';
-    else if(files.some(file=>!input.accept.split(',').includes(file.type)))message='Usá JPG, PNG, WEBP, MP4 o WEBM.';
+    if(files.length>8)message='Podés adjuntar hasta 8 fotos.';
+    else if(files.some(file=>file.size<=0||file.size>2*1024*1024))message='Cada foto debe pesar hasta 2 MB.';
+    else if(files.some(file=>!input.accept.split(',').includes(file.type)))message='Usá fotos JPG, PNG o WEBP.';
+    else if(video?.files[0]&&(video.files[0].type!=='video/mp4'||video.files[0].size>20*1024*1024))message='El video debe ser MP4 y pesar hasta 20 MB.';
     if(feedback)feedback.textContent=message;
     field?.classList.toggle('has-error',Boolean(message));
     return !message;
@@ -151,7 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
   offerGroup?.addEventListener('change',validateOffers);
   form.querySelectorAll('[name="faltan_planos"],[name="falta_escritura"],[name="planos[]"],[name="escrituras[]"]').forEach(el=>el.addEventListener('change',validateRequiredDocuments));
   form.querySelector('[data-document-notes]')?.addEventListener('input',el=>{if(el.currentTarget.dataset.touched==='true')validate(el.currentTarget)});
-  form.querySelector('[name="multimedia[]"]')?.addEventListener('change',validateMedia);
+  form.querySelector('[name="fotos[]"]')?.addEventListener('change',validateMedia);
+  form.querySelector('[name="video"]')?.addEventListener('change',validateMedia);
 
   form.addEventListener('submit', event => {
     const invalid = controls.filter(el => !validate(el, true));

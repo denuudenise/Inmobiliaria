@@ -97,9 +97,11 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <img
                     id="galleryMain"
                     class="gallery-main"
+                    <?= $videos && !$photos ? 'hidden' : '' ?>
                     src="<?= e($photos[0]['url_archivo'] ?? '/Inmobiliaria/recursos/imagenes/propiedad.svg') ?>"
                     alt="<?= e($property['titulo']) ?>"
                 >
+                <?php if($videos): ?><video id="galleryVideo" class="gallery-main" controls playsinline preload="metadata" src="<?= e($videos[0]['url_archivo']) ?>" <?= $photos ? 'hidden' : '' ?>></video><?php endif; ?>
 
                 <div class="gallery-thumbs">
                     <?php foreach ($photos as $i => $photo): ?>
@@ -114,9 +116,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     <?php endforeach; ?>
                 </div>
 
-                <?php foreach ($videos as $video): ?>
-                    <video controls preload="metadata" src="<?= e($video['url_archivo']) ?>"></video>
-                <?php endforeach; ?>
+                    <?php foreach ($videos as $i=>$video): ?><button type="button" data-gallery-kind="video" data-gallery="<?= e($video['url_archivo']) ?>" aria-label="Reproducir video" aria-pressed="<?= !$photos && $i===0?'true':'false' ?>"><span>▶ Video</span></button><?php endforeach; ?>
             </div>
 
          

@@ -35,3 +35,4 @@ Los cierres eligen una oferta concreta. La venta y el alquiler conservan su prop
 ## Normalización del volcado compartido
 
 Después de importar `inmobiliaria (1).sql`, se puede ejecutar `009_ajuste_registros_catalogo.sql`. Sincroniza el estado de las publicaciones con el estado de verificación, marca como pendiente la documentación que no figura asociada a las propiedades, completa una oferta principal solo si falta y equilibra las propiedades aprobadas y disponibles entre los siete agentes activos del volcado. También retira del catálogo, sin borrar sus registros, las dos fichas de prueba claramente incompletas (propiedades 15 y 48). No modifica operaciones cerradas ni inventa montos mínimos. Hacer un respaldo antes de aplicar este ajuste.
+La migración `011_orden_multimedia_solicitudes.sql` agrega el orden persistente de las fotos y videos de las solicitudes. Ejecutala una sola vez después de la 010 antes de usar el ordenamiento de galerías.

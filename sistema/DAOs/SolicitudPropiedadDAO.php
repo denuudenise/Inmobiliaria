@@ -58,16 +58,23 @@ final class SolicitudPropiedadDAO
 
             if ($files) {
                 $media = $this->db->prepare(
-                    'INSERT INTO solicitud_multimedia (id_solicitud, url_archivo, tipo)
-                     VALUES (:solicitud, :url, :tipo)'
+                    'INSERT INTO solicitud_multimedia (id_solicitud, url_archivo, tipo, orden)
+                     VALUES (:solicitud, :url, :tipo, :orden)'
                 );
-                foreach ($files as $file) {
+                $photos=array_values(array_filter($files,static fn($file)=>$file['type']==='Imagen'));
+                $videos=array_values(array_filter($files,static fn($file)=>$file['type']==='Video'));
+                if(count($videos)>1)throw new RuntimeException('Podés adjuntar un solo video MP4.');
+                $ordered=Archivos::orderedImages((string)($privateData['orden_fotos']??''),[],count($photos));
+                $position=0;
+                foreach($ordered as $item){$file=$photos[$item['index']];
                     $media->execute([
                         'solicitud' => $requestId,
                         'url' => $file['path'],
                         'tipo' => $file['type'],
+                        'orden' => ++$position,
                     ]);
                 }
+                foreach($videos as $file)$media->execute(['solicitud'=>$requestId,'url'=>$file['path'],'tipo'=>'Video','orden'=>++$position]);
             }
 
             (new OfertaDAO($this->db))->save('solicitud',$requestId,$data);

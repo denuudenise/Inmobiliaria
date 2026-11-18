@@ -21,6 +21,9 @@ if (!$r) {
 }
 
 $error = '';
+$requestMedia=query_rows('SELECT id_multimedia,url_archivo,tipo FROM solicitud_multimedia WHERE id_solicitud=? ORDER BY orden,id_multimedia',[$id]);
+$requestPhotos=array_values(array_filter($requestMedia,static fn($m)=>$m['tipo']==='Imagen'&&Archivos::isLocalFile((string)$m['url_archivo'])));
+$requestVideos=array_values(array_filter($requestMedia,static fn($m)=>$m['tipo']==='Video'&&Archivos::isLocalFile((string)$m['url_archivo'])));
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -52,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   
         } else {
             $db = Database::connection();
-            $paths = [];
+            $paths = []; $videoPath=null; $oldVideoPaths=[];
             $db->beginTransaction();
 
             try {
@@ -71,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $paths = Archivos::images('fotos');
+                $ordered=Archivos::orderedImages((string)($_POST['orden_fotos']??''),$requestPhotos,count($paths));
 
                 execute_sql(
                     'UPDATE solicitudes_publicacion
@@ -85,13 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$title, $desc, $price, $currency, $id, $user['id']]
                 );
 
-                foreach ($paths as $path) {
-                    execute_sql(
-                        "INSERT INTO solicitud_multimedia (id_solicitud, url_archivo, tipo)
-                         VALUES (?, ?, 'Imagen')",
-                        [$id, $path]
-                    );
-                }
+                foreach($ordered as $position=>$item){if($item['kind']==='existing')execute_sql('UPDATE solicitud_multimedia SET orden=? WHERE id_multimedia=? AND id_solicitud=?',[$position+1,$item['id'],$id]);else execute_sql("INSERT INTO solicitud_multimedia (id_solicitud,url_archivo,tipo,orden) VALUES (?,?,'Imagen',?)",[$id,$paths[$item['index']],$position+1]);}
+                $videoPath=Archivos::video('video');
+                if($videoPath||!empty($_POST['eliminar_video'])){foreach($requestVideos as $oldVideo){execute_sql('DELETE FROM solicitud_multimedia WHERE id_multimedia=? AND id_solicitud=?',[$oldVideo['id_multimedia'],$id]);$oldVideoPaths[]=$oldVideo['url_archivo'];}if($videoPath)execute_sql("INSERT INTO solicitud_multimedia (id_solicitud,url_archivo,tipo,orden) VALUES (?,?,'Video',?)",[$id,$videoPath,count($requestPhotos)+count($paths)+1]);}
 
                 $offers=new OfertaDAO($db);
                 $offers->save('solicitud',$id,$_POST);
@@ -100,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     execute_sql('UPDATE solicitudes_publicacion SET id_tipo_transaccion=? WHERE id_solicitud=?',[$selected['id_tipo_transaccion'],$id]);
                 }
                 $db->commit();
+                Archivos::remove($oldVideoPaths);
 
                 flash('Solicitud actualizada y enviada a revisión.');
                 redirect('/Inmobiliaria/cliente/solicitud.php?id=' . $id);
@@ -109,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $db->rollBack();
                 }
 
-                Archivos::remove($paths);
+                Archivos::remove([...$paths,...($videoPath?[$videoPath]:[])]);
 
                 $error = $e instanceof PDOException
                     ? 'No se pudo guardar la solicitud.'
@@ -182,16 +183,12 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
 
                 <?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
-<div class="field full">
-                    <label for="fotos">Agregar fotos (JPG, PNG o WEBP, hasta 2 MB cada una)</label>
-                    <input
-                        id="fotos"
-                        type="file"
-                        name="fotos[]"
-                        accept="image/jpeg,image/png,image/webp"
-                        multiple
-                    >
-                </div>
+<div class="field full media-manager" data-media-manager>
+    <h3>Orden de las fotos</h3><p class="help-text">La primera foto será la portada. Después ordená los ambientes principales y dejá los detalles y exteriores para el final.</p>
+    <ol class="media-sort-list" data-sort-list><?php foreach($requestPhotos as $position=>$photo): ?><li data-media-item="e:<?= (int)$photo['id_multimedia'] ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Foto <?= $position+1 ?>"><span data-position-label><?= $position===0?'Portada':'Foto '.($position+1) ?></span><button type="button" data-move="up" aria-label="Subir foto">↑</button><button type="button" data-move="down" aria-label="Bajar foto">↓</button></li><?php endforeach; ?></ol><input type="hidden" name="orden_fotos" value="" data-order-value>
+    <label for="fotos">Agregar fotos (hasta 8 por carga, 2 MB por foto)</label><input id="fotos" name="fotos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-new-photos>
+    <div class="media-video-box"><label for="video">Video opcional (MP4, hasta 20 MB)</label><?php if($requestVideos): ?><video controls preload="metadata" src="<?= e($requestVideos[0]['url_archivo']) ?>"></video><label class="check-row"><input type="checkbox" name="eliminar_video" value="1"> Eliminar el video actual</label><?php endif; ?><input id="video" name="video" type="file" accept="video/mp4" data-property-video><?php if($requestVideos): ?><small>Al elegir otro MP4, reemplazará el actual.</small><?php endif; ?></div>
+</div>
 
             
                 <div class="field full">

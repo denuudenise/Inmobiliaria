@@ -53,7 +53,7 @@ final class PropiedadDAO
     public function findImages(int $propertyId): array
     {
         $statement = $this->db->prepare(
-            'SELECT url_archivo, tipo FROM propiedad_multimedia
+            'SELECT id_multimedia, url_archivo, tipo, orden FROM propiedad_multimedia
              WHERE id_propiedad = :id ORDER BY orden, id_multimedia'
         );
         $statement->execute(['id' => $propertyId]);

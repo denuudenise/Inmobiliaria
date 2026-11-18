@@ -862,17 +862,7 @@ function person_options(array $people, int $selected = 0): void
                                 
                                 <?php $offerKind='propiedad'; $offerId=$id; require __DIR__.'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
 <?php $documentState=$p; require __DIR__.'/sistema/Vistas/Diseno/expediente-form.php'; ?>
-<div class="field full">
-                                    <label for="fotos">Agregar fotos (hasta 8, máximo 2 MB cada una)</label>
-                                    <input
-                                        id="fotos"
-                                        name="fotos[]"
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        multiple
-                                    >
-                                    <small>Se agregan a las fotos existentes.</small>
-                                </div>
+<?php $mediaPropertyId=$id; require __DIR__.'/sistema/Vistas/Diseno/multimedia-propiedad-form.php'; ?>
 
                                 <div class="actions full">
                                     <button class="btn">Guardar propiedad</button>
@@ -968,7 +958,7 @@ function person_options(array $people, int $selected = 0): void
 <?php if ($admin || (int)$r['id_agente']===(int)$user['id']): ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= (int)$r['id_solicitud'] ?>">Revisar documentación e impuestos</a></p><?php endif; ?>
 <?php
                                 $multimedia = query_rows(
-                                    'SELECT * FROM solicitud_multimedia WHERE id_solicitud=?',
+                                    'SELECT * FROM solicitud_multimedia WHERE id_solicitud=? ORDER BY orden,id_multimedia',
                                     [$r['id_solicitud']]
                                 );
 

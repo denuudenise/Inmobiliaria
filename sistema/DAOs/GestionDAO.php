@@ -38,7 +38,7 @@ final class GestionDAO
                     execute_sql('UPDATE propiedades SET id_propietario=? WHERE id_propiedad=?',[$r['id_cliente'],$property]);
                     (new ModeloCompartidoDAO($this->db))->property($property,(int)$r['id_cliente']);
                     (new OfertaDAO($this->db))->approve($id,$property);
-                    execute_sql('INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo) SELECT ?,url_archivo,tipo FROM solicitud_multimedia WHERE id_solicitud=?',[$property,$id]);
+                    execute_sql('INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo,orden) SELECT ?,url_archivo,tipo,orden FROM solicitud_multimedia WHERE id_solicitud=? ORDER BY orden,id_multimedia',[$property,$id]);
                     execute_sql('UPDATE solicitudes_publicacion SET id_estado_verificacion=3,motivo_rechazo=NULL WHERE id_solicitud=?',[$id]);
                     $this->db->prepare('INSERT INTO historial_asignaciones (tipo_entidad,id_entidad,agente_anterior,agente_nuevo,id_usuario_cambio,motivo) VALUES (?,?,?,?,?,?)')->execute(['propiedad',$property,null,$agent,$user['id'],'Asignación inicial al publicar la solicitud']);
                     (new AuditoriaDAO($this->db))->record((int)$user['id'],'aprobar','propiedad',$property,'Propiedad publicada desde solicitud #'.$id);
@@ -58,15 +58,18 @@ final class GestionDAO
         if (!is_numeric($data['precio']??'') || (float)$data['precio']<=0 || (float)$data['precio']>9999999999 || !is_numeric($data['superficie']??'') || (float)$data['superficie']<=0 || (float)$data['superficie']>999999) throw new RuntimeException('Ingresá precio y superficie válidos.');
         foreach (['ambientes','dormitorios','banos'] as $field) if (filter_var($data[$field]??'',FILTER_VALIDATE_INT)===false || (int)$data[$field]<0 || (int)$data[$field]>100) throw new RuntimeException('Los ambientes, dormitorios y baños deben ser enteros entre 0 y 100.');
         if (!in_array($data['moneda']??'', ['USD','ARS'],true) || !query_rows('SELECT 1 FROM tipos_propiedad WHERE id_tipo_propiedad=?',[(int)($data['tipo']??0)]) || !query_rows('SELECT 1 FROM tipos_transaccion WHERE id_tipo_transaccion=?',[(int)($data['operacion']??0)])) throw new RuntimeException('Tipo, operación o moneda inválidos.');
-        $paths=[];
+        $paths=[]; $videoPath=null; $oldVideoPaths=[];
         $expediente=new ExpedienteDAO($this->db);
         $this->db->beginTransaction();
         try {
             $old=null;
+            $existingPhotos=[]; $existingVideos=[];
             if ($id) {
                 $q=$this->db->prepare('SELECT * FROM propiedades WHERE id_propiedad=? FOR UPDATE'); $q->execute([$id]); $old=$q->fetch();
                 if (!$old || ($user['role']!=='Administrador' && (int)$old['id_agente_creador']!==$user['id'])) throw new RuntimeException('No podés editar esta propiedad.');
                 if (in_array((int)$old['id_estado_comercial'],[3,4],true)) throw new RuntimeException('Una operación cerrada no se edita desde el catálogo.');
+                $mediaQuery=$this->db->prepare('SELECT id_multimedia,url_archivo,tipo FROM propiedad_multimedia WHERE id_propiedad=? ORDER BY orden,id_multimedia');$mediaQuery->execute([$id]);
+                foreach($mediaQuery->fetchAll() as $media){if(!Archivos::isLocalFile((string)$media['url_archivo']))continue;if($media['tipo']==='Imagen')$existingPhotos[]=$media;elseif($media['tipo']==='Video')$existingVideos[]=$media;}
             }
             $agent=$user['role']==='Administrador'?(int)($data['agente']??0):$user['id'];
             if (!query_rows('SELECT id_usuario FROM usuarios WHERE id_usuario=? AND id_rol=2 AND activo=1',[$agent])) throw new RuntimeException('Seleccioná un agente activo.');
@@ -88,9 +91,19 @@ final class GestionDAO
             else (new AuditoriaDAO($this->db))->record((int)$user['id'],'crear','propiedad',$id,'Propiedad creada desde panel');
             $expediente->save($id,$old['id_solicitud']??null,(int)$user['id'],$data);
             $paths=Archivos::images('fotos');
-            foreach ($paths as $path) execute_sql("INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo) VALUES (?,?,'Imagen')",[$id,$path]);
+            $order=Archivos::orderedImages((string)($data['orden_fotos']??''),$existingPhotos,count($paths));
+            foreach($order as $position=>$item){
+                if($item['kind']==='existing')execute_sql('UPDATE propiedad_multimedia SET orden=? WHERE id_multimedia=? AND id_propiedad=?',[$position+1,$item['id'],$id]);
+                else execute_sql("INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo,orden) VALUES (?,?,'Imagen',?)",[$id,$paths[$item['index']],$position+1]);
+            }
+            $videoPath=Archivos::video('video');
+            if($videoPath || !empty($data['eliminar_video'])){
+                foreach($existingVideos as $media){execute_sql('DELETE FROM propiedad_multimedia WHERE id_multimedia=? AND id_propiedad=?',[$media['id_multimedia'],$id]);$oldVideoPaths[]=$media['url_archivo'];}
+                if($videoPath)execute_sql("INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo,orden) VALUES (?,?,'Video',?)",[$id,$videoPath,count($existingPhotos)+count($paths)+1]);
+            }
             $this->db->commit();
-        } catch (Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); Archivos::remove($paths); $expediente->cleanup(); throw $e; }
+            Archivos::remove($oldVideoPaths);
+        } catch (Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); Archivos::remove([...$paths,...($videoPath?[$videoPath]:[])]); $expediente->cleanup(); throw $e; }
     }
 
     public function closeOperation(array $data, array $user): void
