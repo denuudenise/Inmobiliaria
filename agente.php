@@ -29,7 +29,7 @@ $sections['perfil'] = 'Mi perfil';
 
 if (!isset($sections[$section])) {
     http_response_code(404);
-    exit('Sección no encontrada.');
+    ui_error('Sección no encontrada.');
 }
 
 $db = Database::connection();
@@ -402,7 +402,7 @@ function person_options(array $people, int $selected = 0): void
     <div class="dashboard-title">
         <div>
             <span class="eyebrow"><?= e($user['role']) ?> / Nuevo Hogar</span>
-            <h1><?= $section === 'resumen' ? 'Hola, ' . e($user['name']) : e($sections[$section]) ?></h1>
+            <h1 translate="no"><?= $section === 'resumen' ? 'Hola, ' . e($user['name']) : e($sections[$section]) ?></h1>
             <p>Tu trabajo, organizado en un solo lugar.</p>
         </div>
         <a class="btn btn-outline" href="/Inmobiliaria/index.php">Ver sitio público ↗</a>
@@ -413,7 +413,7 @@ function person_options(array $people, int $selected = 0): void
    
         <aside class="side-card staff-side">
             <div class="side-user">
-                <strong><?= e($user['name'] . ' ' . $user['surname']) ?></strong>
+                <strong translate="no"><?= e($user['name'] . ' ' . $user['surname']) ?></strong>
             </div>
 
             <nav class="side-nav" aria-label="Panel de gestión">
@@ -478,7 +478,7 @@ function person_options(array $people, int $selected = 0): void
                             <?php if ($props): ?>
                                 <div class="table-wrap"><table class="table agent-summary-table"><thead><tr><th>ID</th><th>Tipo y ubicación</th><th>Precio</th><th>Estado</th><th></th></tr></thead><tbody>
                                 <?php foreach (array_slice($props, 0, 5) as $property): ?>
-                                    <tr><td>#<?= (int)$property['id_propiedad'] ?></td><td><strong><?= e($property['titulo']) ?></strong><small><?= e($property['tipo'] . ' · ' . $property['localidad']) ?></small></td><td><?= e($property['moneda']) ?> <?= number_format((float)$property['precio'], 0, ',', '.') ?></td><td><span class="status blue"><?= e($property['verificacion']) ?></span></td><td><a class="text-link" href="?seccion=propiedades&editar=<?= (int)$property['id_propiedad'] ?>">Gestionar</a></td></tr>
+                                    <tr><td>#<?= (int)$property['id_propiedad'] ?></td><td><strong translate="no"><?= e($property['titulo']) ?></strong><small><?= e($property['tipo'] . ' · ' . $property['localidad']) ?></small></td><td><?= e($property['moneda']) ?> <?= number_format((float)$property['precio'], 0, ',', '.') ?></td><td><span class="status blue"><?= e($property['verificacion']) ?></span></td><td><a class="text-link" href="?seccion=propiedades&editar=<?= (int)$property['id_propiedad'] ?>">Gestionar</a></td></tr>
                                 <?php endforeach; ?>
                                 </tbody></table></div>
                             <?php else: ?><div class="agent-empty">Todavía no tenés propiedades asignadas.</div><?php endif; ?>
@@ -494,7 +494,7 @@ function person_options(array $people, int $selected = 0): void
 
                         <article class="content-card agent-clients-card">
                             <div class="agent-card-heading"><div><h2>Clientes vinculados</h2><p>Clientes con actividad en tus propiedades.</p></div><a class="text-link" href="?seccion=clientes">Ver todos →</a></div>
-                            <?php if ($dashboardClients): ?><div class="agent-client-list"><?php foreach ($dashboardClients as $client): ?><a href="?seccion=clientes&q=<?= urlencode($client['email']) ?>"><span class="agent-client-avatar"><?= e(mb_strtoupper(mb_substr($client['nombre'], 0, 1))) ?></span><span><strong><?= e($client['nombre'] . ' ' . $client['apellido']) ?></strong><small><?= (int)$client['propiedades_vinculadas'] ?> <?= (int)$client['propiedades_vinculadas'] === 1 ? 'propiedad vinculada' : 'propiedades vinculadas' ?></small></span><span class="status blue">Ver</span></a><?php endforeach; ?></div><?php else: ?><div class="agent-empty">Todavía no hay clientes vinculados a tus propiedades.</div><?php endif; ?>
+                            <?php if ($dashboardClients): ?><div class="agent-client-list"><?php foreach ($dashboardClients as $client): ?><a href="?seccion=clientes&q=<?= urlencode($client['email']) ?>"><span class="agent-client-avatar"><?= e(mb_strtoupper(mb_substr($client['nombre'], 0, 1))) ?></span><span><strong translate="no"><?= e($client['nombre'] . ' ' . $client['apellido']) ?></strong><small><?= (int)$client['propiedades_vinculadas'] ?> <?= (int)$client['propiedades_vinculadas'] === 1 ? 'propiedad vinculada' : 'propiedades vinculadas' ?></small></span><span class="status blue">Ver</span></a><?php endforeach; ?></div><?php else: ?><div class="agent-empty">Todavía no hay clientes vinculados a tus propiedades.</div><?php endif; ?>
                         </article>
 
                         <article class="content-card agent-requests-card">
@@ -735,8 +735,8 @@ function person_options(array $people, int $selected = 0): void
                                     <?php foreach ($props as $p): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= e($p['titulo']) ?></strong><br>
-                                                <small><?= e($p['localidad']) ?></small>
+                                                <strong translate="no"><?= e($p['titulo']) ?></strong><br>
+                                                <small translate="no"><?= e($p['localidad']) ?></small>
                                             </td>
                                             <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?><?php if((int)$listedOffer['id_tipo_transaccion']===1 && !empty($listedOffer['precio_minimo'])): ?><small>Mínimo aceptado (interno): <?= e($listedOffer['moneda'].' '.number_format((float)$listedOffer['precio_minimo'],2,',','.')) ?></small><?php endif; ?></div><?php endforeach; ?></td>
                                             <td><?= e($p['verificacion']) ?></td>
@@ -774,14 +774,14 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record" id="solicitud-<?= $r['id_solicitud'] ?>">
                             <summary>
                                 <span>
-                                    <strong><?= e($r['titulo']) ?></strong>
-                                    <small><?= e($r['cliente'] . ' ' . $r['apellido'] . ' · ' . $r['localidad']) ?></small>
+                                    <strong translate="no"><?= e($r['titulo']) ?></strong>
+                                    <small translate="no"><?= e($r['cliente'] . ' ' . $r['apellido'] . ' · ' . $r['localidad']) ?></small>
                                 </span>
                                 <span class="status blue"><?= e($r['estado']) ?></span>
                             </summary>
 
                             <div class="record-body">
-                                <p><?= nl2br(e($r['descripcion'])) ?></p>
+                                <p translate="no"><?= nl2br(e($r['descripcion'])) ?></p>
                                 <?php if (!empty($r['faltan_planos']) || !empty($r['falta_escritura'])): ?><p class="notice"><strong>Documentación pendiente:</strong> <?= !empty($r['faltan_planos'])?'planos':'' ?><?= !empty($r['faltan_planos']) && !empty($r['falta_escritura'])?' y ':'' ?><?= !empty($r['falta_escritura'])?'escritura':'' ?>. <?php if (!empty($r['observaciones_documentacion'])): ?><?= e($r['observaciones_documentacion']) ?><?php endif; ?></p><?php endif; ?>
 
                                 <p>
@@ -881,18 +881,18 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record">
                             <summary>
                                 <span>
-                                    <strong><?= e($c['titulo']) ?></strong>
-                                    <small><?= e($c['nombre'] . ' ' . $c['apellido']) ?></small>
+                                    <strong translate="no"><?= e($c['titulo']) ?></strong>
+                                    <small translate="no"><?= e($c['nombre'] . ' ' . $c['apellido']) ?></small>
                                 </span>
                                 <span class="status blue"><?= e($c['estado']) ?></span>
                             </summary>
 
                             <div class="record-body">
-                                <p><?= nl2br(e($c['mensaje'])) ?></p>
+                                <p translate="no"><?= nl2br(e($c['mensaje'])) ?></p>
                                 <?php if (!empty($c['email_contacto']) || !empty($c['telefono_contacto'])): ?><p><strong>Contacto:</strong> <?= e($c['email_contacto'] ?? '') ?><?= !empty($c['email_contacto']) && !empty($c['telefono_contacto']) ? ' · ' : '' ?><?= e($c['telefono_contacto'] ?? '') ?></p><?php endif; ?>
 
                                 <?php if ($c['respuesta']): ?>
-                                    <p class="notice"><?= nl2br(e($c['respuesta'])) ?></p>
+                                    <p class="notice" translate="no"><?= nl2br(e($c['respuesta'])) ?></p>
                                 <?php endif; ?>
 
                                 <form method="post" class="modal-form">
@@ -1050,8 +1050,8 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record">
                             <summary>
                                 <span>
-                                    <strong><?= e($person['nombre'] . ' ' . $person['apellido']) ?></strong>
-                                    <small><?= e($person['email']) ?></small>
+                                    <strong translate="no"><?= e($person['nombre'] . ' ' . $person['apellido']) ?></strong>
+                                    <small translate="no"><?= e($person['email']) ?></small>
                                 </span>
                                 <span class="status <?= $person['activo'] ? 'blue' : 'gray' ?>">
                                     <?= e($person['rol']) ?> · <?= $person['activo'] ? 'Activo' : 'Inactivo' ?>
@@ -1240,8 +1240,8 @@ function person_options(array $people, int $selected = 0): void
                                 <tbody>
                                     <?php foreach ($rows as $row): ?>
                                         <tr>
-                                            <td><?= e($row['titulo']) ?></td>
-                                            <td><?= e($row['nombre'] . ' ' . $row['apellido']) ?></td>
+                                            <td translate="no"><?= e($row['titulo']) ?></td>
+                                            <td translate="no"><?= e($row['nombre'] . ' ' . $row['apellido']) ?></td>
                                             <td><?= e($row['moneda'] . ' ' . number_format((float)$row['monto'], 0, ',', '.')) ?></td>
                                             <td><?= e(date('d/m/Y', strtotime($row['fecha']))) ?></td>
                                             <td>
@@ -1276,7 +1276,7 @@ function person_options(array $people, int $selected = 0): void
 
                 <div class="content-card">
                     <h2>Tu cuenta</h2>
-                    <p><?= e($user['name'] . ' ' . $user['surname'] . ' · ' . $user['email']) ?></p>
+                    <p translate="no"><?= e($user['name'] . ' ' . $user['surname'] . ' · ' . $user['email']) ?></p>
                     <a class="btn" href="/Inmobiliaria/cuenta.php">Editar perfil y contraseña</a>
                 </div>
 

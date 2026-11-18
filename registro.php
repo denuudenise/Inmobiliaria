@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $dao->findByEmail($email);
 
             session_regenerate_id(true);
+            $_SESSION['auth_fingerprint'] = hash('sha256', $user['password_hash']);
 
             $_SESSION['user'] = [
                 'id'      => (int)$user['id_usuario'],
@@ -137,7 +138,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="register-fields">
                 <div class="field<?= isset($fieldErrors['email'])?' has-error':'' ?>"><label for="email">Correo electrónico <i>*</i></label><input id="email" name="email" type="email" maxlength="150" value="<?= e((string)($_POST['email'] ?? '')) ?>" autocomplete="email" required aria-invalid="<?= isset($fieldErrors['email'])?'true':'false' ?>" aria-describedby="ayuda-email"><small class="field-feedback" id="ayuda-email" aria-live="polite"><?= e($fieldErrors['email'] ?? '') ?></small></div>
                 <div class="field<?= isset($fieldErrors['telefono'])?' has-error':'' ?>"><label for="telefono">Teléfono <span class="optional-tag">Opcional</span></label><input id="telefono" name="telefono" type="tel" maxlength="30" pattern="\+?[0-9(). -]{6,30}" value="<?= e((string)($_POST['telefono'] ?? '')) ?>" autocomplete="tel" aria-invalid="<?= isset($fieldErrors['telefono'])?'true':'false' ?>" aria-describedby="ayuda-telefono"><small class="field-feedback" id="ayuda-telefono" aria-live="polite"><?= e($fieldErrors['telefono'] ?? '') ?></small></div>
-                <div class="field<?= isset($fieldErrors['direccion'])?' has-error':'' ?>"><label for="direccion">Dirección <i>*</i></label><input id="direccion" name="direccion" type="text" minlength="3" maxlength="255" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ .,#º°/'-]{3,255}" value="<?= e((string)($_POST['direccion'] ?? '')) ?>" autocomplete="street-address" required aria-invalid="<?= isset($fieldErrors['direccion'])?'true':'false' ?>" aria-describedby="ayuda-direccion"><small class="field-feedback" id="ayuda-direccion" aria-live="polite"><?= e($fieldErrors['direccion'] ?? '') ?></small></div>
+                <div class="field<?= isset($fieldErrors['direccion'])?' has-error':'' ?>"><label for="direccion">Dirección <i>*</i></label><input id="direccion" name="direccion" type="text" minlength="3" maxlength="255" pattern="(?=.*\p{L})[\p{L}\p{M}\p{N}\s.,#º°\/'\-]{3,255}" value="<?= e((string)($_POST['direccion'] ?? '')) ?>" autocomplete="street-address" required aria-invalid="<?= isset($fieldErrors['direccion'])?'true':'false' ?>" aria-describedby="ayuda-direccion"><small class="field-feedback" id="ayuda-direccion" aria-live="polite"><?= e($fieldErrors['direccion'] ?? '') ?></small></div>
                 <div class="field<?= isset($fieldErrors['localidad'])?' has-error':'' ?>"><label for="localidad">Localidad <i>*</i></label><input id="localidad" name="localidad" type="text" minlength="2" maxlength="100" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ .,'-]{2,100}" value="<?= e((string)($_POST['localidad'] ?? '')) ?>" autocomplete="address-level2" required aria-invalid="<?= isset($fieldErrors['localidad'])?'true':'false' ?>" aria-describedby="ayuda-localidad"><small class="field-feedback" id="ayuda-localidad" aria-live="polite"><?= e($fieldErrors['localidad'] ?? '') ?></small></div>
             </div>
             <div class="register-step-actions"><button class="btn btn-outline" type="button" data-back>← Anterior</button><button class="btn" type="button" data-next>Paso siguiente <span aria-hidden="true">→</span></button></div>
@@ -222,7 +223,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
         const feedback = document.getElementById(`ayuda-${name}`);
         const show = force || el.dataset.touched === 'true' || submitted;
         el.setAttribute('aria-invalid', show && invalid ? 'true' : 'false');
-        el.setCustomValidity(show && invalid ? (emptyRequired ? 'Completá este campo.' : messages[name]) : '');
+        WebIdioma.setValidity(el, show && invalid ? (emptyRequired ? 'Completá este campo.' : messages[name]) : '');
         el.closest('.field').classList.toggle('has-error', show && invalid);
         el.closest('.field').classList.toggle('is-valid', show && !invalid && value !== '');
         if (feedback && show) feedback.textContent = invalid ? (emptyRequired ? 'Este campo es obligatorio.' : messages[name]) : (value ? successes[name] : hints[name]) || '';

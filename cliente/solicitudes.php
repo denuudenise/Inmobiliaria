@@ -81,7 +81,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                             <?= e($request['titulo']) ?> →
                                         </a>
                                         <br>
-                                        <small><?= e($request['localidad']) ?></small>
+                                        <small translate="no"><?= e($request['localidad']) ?></small>
 
                                         <?php if ($request['estado'] === 'Rechazado' && $request['motivo_rechazo']): ?>
                                             <br>

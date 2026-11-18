@@ -4,7 +4,7 @@ require __DIR__.'/sistema/Nucleo/inicio.php';
 $user=require_user(); $db=Database::connection(); $dao=new ExpedienteDAO($db);
 $kind=(string)($_GET['tipo']??''); $id=(int)($_GET['id']??0); $error='';
 try { $context=$dao->context($kind,$id,$user); }
-catch (RuntimeException $e) { http_response_code(404); exit('Ficha no disponible para tu usuario.'); }
+catch (RuntimeException $e) { http_response_code(404); ui_error('Ficha no disponible para tu usuario.'); }
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     verify_csrf();
     try {
@@ -32,7 +32,7 @@ require __DIR__.'/sistema/Vistas/Diseno/encabezado.php';
 <section class="content-card"><h2>Impuestos registrados</h2>
 <?php if (!$records['propiedad_impuestos']): ?><p>No hay impuestos cargados.</p><?php else: ?>
 <div class="table-wrap"><table class="table"><thead><tr><th>Concepto</th><th>Período</th><th>Base</th><th>Porcentaje</th><th>Importe</th></tr></thead><tbody>
-<?php foreach ($records['propiedad_impuestos'] as $tax): ?><tr><td><?= e($tax['concepto']) ?></td><td><?= e($tax['periodo']) ?></td><td><?= e($tax['moneda'].' '.number_format((float)$tax['base'],2,',','.')) ?></td><td><?= e($tax['porcentaje']) ?> %</td><td><?= e($tax['moneda'].' '.number_format((float)$tax['importe'],2,',','.')) ?></td></tr><?php endforeach; ?>
+<?php foreach ($records['propiedad_impuestos'] as $tax): ?><tr><td translate="no"><?= e($tax['concepto']) ?></td><td><?= e($tax['periodo']) ?></td><td><?= e($tax['moneda'].' '.number_format((float)$tax['base'],2,',','.')) ?></td><td><?= e($tax['porcentaje']) ?> %</td><td><?= e($tax['moneda'].' '.number_format((float)$tax['importe'],2,',','.')) ?></td></tr><?php endforeach; ?>
 </tbody></table></div><?php endif; ?></section>
 <section class="content-card"><h2>Agregar documentación o impuestos</h2><form method="post" enctype="multipart/form-data" class="form-grid"><?php csrf_field(); require __DIR__.'/sistema/Vistas/Diseno/expediente-form.php'; ?><div class="full"><button class="btn">Guardar en la ficha</button></div></form></section>
 </section>

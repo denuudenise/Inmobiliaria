@@ -3,7 +3,7 @@ $currentUser = current_user();
 $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
 ?>
 <!doctype html>
-<html lang="es">
+<html lang="<?= ($_COOKIE['inmo_lang'] ?? '') === 'en' ? 'en' : 'es' ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,6 +18,9 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
         rel="stylesheet"
     >
+
+    <script type="application/json" id="ui-catalog"><?php readfile(__DIR__ . '/../../../recursos/idiomas/en.json'); ?></script>
+    <script src="/Inmobiliaria/recursos/scripts/idioma.js"></script>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/Inmobiliaria/recursos/estilos/estilos.css?v=<?= (int)filemtime(__DIR__.'/../../../recursos/estilos/estilos.css') ?>">
@@ -165,6 +168,10 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
 
     
     <div class="top-actions">
+        <select id="ui-language" class="language-select" aria-label="Idioma">
+            <option value="es" lang="es" translate="no">Español</option>
+            <option value="en" lang="en" translate="no">English</option>
+        </select>
 
         <button
             type="button"

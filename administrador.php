@@ -30,7 +30,7 @@ $sections['perfil'] = 'Mi perfil';
 
 if (!isset($sections[$section])) {
     http_response_code(404);
-    exit('Sección no encontrada.');
+    ui_error('Sección no encontrada.');
 }
 
 $db = Database::connection();
@@ -368,7 +368,7 @@ function person_options(array $people, int $selected = 0): void
     <div class="dashboard-title">
         <div>
             <span class="eyebrow"><?= e($user['role']) ?> / Nuevo Hogar</span>
-            <h1><?= $section === 'resumen' ? 'Hola, ' . e($user['name']) : e($sections[$section]) ?></h1>
+            <h1 translate="no"><?= $section === 'resumen' ? 'Hola, ' . e($user['name']) : e($sections[$section]) ?></h1>
             <p>Tu trabajo, organizado en un solo lugar.</p>
         </div>
         <a class="btn btn-outline" href="/Inmobiliaria/index.php">Ver sitio público ↗</a>
@@ -379,7 +379,7 @@ function person_options(array $people, int $selected = 0): void
         <!--  MENÚ LATERAL -->
         <aside class="side-card staff-side">
             <div class="side-user">
-                <strong><?= e($user['name'] . ' ' . $user['surname']) ?></strong>
+                <strong translate="no"><?= e($user['name'] . ' ' . $user['surname']) ?></strong>
             </div>
 
             <nav class="side-nav" aria-label="Panel de gestión">
@@ -907,8 +907,8 @@ function person_options(array $people, int $selected = 0): void
                                     <?php foreach ($props as $p): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= e($p['titulo']) ?></strong><br>
-                                                <small><?= e($p['localidad']) ?></small>
+                                                <strong translate="no"><?= e($p['titulo']) ?></strong><br>
+                                                <small translate="no"><?= e($p['localidad']) ?></small>
                                             </td>
                                             <td><?= $p['agente_nombre'] ? e(trim($p['agente_nombre'].' '.$p['agente_apellido'])) : '<span class="status amber">Sin asignar</span>' ?></td>
                                             <td><?php foreach ((new OfertaDAO($db))->read('propiedad',(int)$p['id_propiedad']) as $listedOffer): ?><div><?= e($listedOffer['nombre'].' · '.$listedOffer['moneda'].' '.number_format((float)$listedOffer['precio'],2,',','.')) ?><?php if((int)$listedOffer['id_tipo_transaccion']===1 && !empty($listedOffer['precio_minimo'])): ?><small>Mínimo aceptado (interno): <?= e($listedOffer['moneda'].' '.number_format((float)$listedOffer['precio_minimo'],2,',','.')) ?></small><?php endif; ?></div><?php endforeach; ?></td>
@@ -947,14 +947,14 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record" id="solicitud-<?= $r['id_solicitud'] ?>">
                             <summary>
                                 <span>
-                                    <strong><?= e($r['titulo']) ?></strong>
-                                    <small><?= e($r['cliente'] . ' ' . $r['apellido'] . ' · ' . $r['localidad']) ?></small>
+                                    <strong translate="no"><?= e($r['titulo']) ?></strong>
+                                    <small translate="no"><?= e($r['cliente'] . ' ' . $r['apellido'] . ' · ' . $r['localidad']) ?></small>
                                 </span>
                                 <span class="status blue"><?= e($r['estado']) ?></span>
                             </summary>
 
                             <div class="record-body">
-                                <p><?= nl2br(e($r['descripcion'])) ?></p>
+                                <p translate="no"><?= nl2br(e($r['descripcion'])) ?></p>
                                 <?php if (!empty($r['faltan_planos']) || !empty($r['falta_escritura'])): ?><p class="notice"><strong>Documentación pendiente:</strong> <?= !empty($r['faltan_planos'])?'planos':'' ?><?= !empty($r['faltan_planos']) && !empty($r['falta_escritura'])?' y ':'' ?><?= !empty($r['falta_escritura'])?'escritura':'' ?>. <?php if (!empty($r['observaciones_documentacion'])): ?><?= e($r['observaciones_documentacion']) ?><?php endif; ?></p><?php endif; ?>
 
                                 <p>
@@ -1054,18 +1054,18 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record">
                             <summary>
                                 <span>
-                                    <strong><?= e($c['titulo']) ?></strong>
-                                    <small><?= e($c['nombre'] . ' ' . $c['apellido']) ?></small>
+                                    <strong translate="no"><?= e($c['titulo']) ?></strong>
+                                    <small translate="no"><?= e($c['nombre'] . ' ' . $c['apellido']) ?></small>
                                 </span>
                                 <span class="status blue"><?= e($c['estado']) ?></span>
                             </summary>
 
                             <div class="record-body">
-                                <p><?= nl2br(e($c['mensaje'])) ?></p>
+                                <p translate="no"><?= nl2br(e($c['mensaje'])) ?></p>
                                 <?php if (!empty($c['email_contacto']) || !empty($c['telefono_contacto'])): ?><p><strong>Contacto:</strong> <?= e($c['email_contacto'] ?? '') ?><?= !empty($c['email_contacto']) && !empty($c['telefono_contacto']) ? ' · ' : '' ?><?= e($c['telefono_contacto'] ?? '') ?></p><?php endif; ?>
 
                                 <?php if ($c['respuesta']): ?>
-                                    <p class="notice"><?= nl2br(e($c['respuesta'])) ?></p>
+                                    <p class="notice" translate="no"><?= nl2br(e($c['respuesta'])) ?></p>
                                 <?php endif; ?>
 
                                 <form method="post" class="modal-form">
@@ -1108,13 +1108,13 @@ function person_options(array $people, int $selected = 0): void
                     <p class="content-subtitle">Acciones y cambios recientes con usuario, fecha y detalle.</p>
                     <?php if ($auditEvents): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Elemento</th><th>Detalle</th><th>Cambios registrados</th></tr></thead><tbody>
                         <?php foreach ($auditEvents as $event): $eventChanges=query_rows('SELECT campo,valor_anterior,valor_nuevo,motivo FROM auditoria_cambios WHERE id_evento=? ORDER BY id_cambio',[(int)$event['id_evento']]); ?>
-                            <tr><td><?= e(date('d/m/Y H:i',strtotime($event['fecha']))) ?></td><td><?= e($event['nombre'].' '.$event['apellido']) ?></td><td><?= e($event['accion']) ?></td><td><?= e($event['entidad'].' #'.$event['id_registro']) ?></td><td><?= e($event['detalle']??'') ?></td><td><?php foreach($eventChanges as $change): ?><div><strong><?= e($change['campo']) ?>:</strong> <?= e((string)$change['valor_anterior']) ?> → <?= e((string)$change['valor_nuevo']) ?><?php if($change['motivo']): ?><small> · <?= e($change['motivo']) ?></small><?php endif; ?></div><?php endforeach; ?></td></tr>
+                            <tr><td><?= e(date('d/m/Y H:i',strtotime($event['fecha']))) ?></td><td translate="no"><?= e($event['nombre'].' '.$event['apellido']) ?></td><td><?= e($event['accion']) ?></td><td><?= e($event['entidad'].' #'.$event['id_registro']) ?></td><td><?= e($event['detalle']??'') ?></td><td><?php foreach($eventChanges as $change): ?><div><strong><?= e($change['campo']) ?>:</strong> <?= e((string)$change['valor_anterior']) ?> → <?= e((string)$change['valor_nuevo']) ?><?php if($change['motivo']): ?><small> · <?= e($change['motivo']) ?></small><?php endif; ?></div><?php endforeach; ?></td></tr>
                         <?php endforeach; ?>
                     </tbody></table></div><?php else: ?><p>No hay eventos registrados todavía.</p><?php endif; ?>
                 </div>
                 <div class="content-card"><h2>Historial de estados y precios</h2>
-                    <h3>Estados de propiedades</h3><?php if($stateHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Usuario</th><th>Cambio</th><th>Motivo</th></tr></thead><tbody><?php foreach($stateHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['titulo']) ?></td><td><?= e($h['nombre'].' '.$h['apellido']) ?></td><td><?= e($h['anterior'].' → '.$h['nuevo']) ?></td><td><?= e($h['motivo']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de estado registrados.</p><?php endif; ?>
-                    <h3>Precios</h3><?php if($priceHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Operación</th><th>Precio anterior</th><th>Precio nuevo</th><th>Usuario / motivo</th></tr></thead><tbody><?php foreach($priceHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['titulo']) ?></td><td><?= e($h['operacion']) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_anterior'],2,',','.')) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_nuevo'],2,',','.')) ?></td><td><?= e($h['nombre'].' '.$h['apellido']) ?><?= $h['motivo']?' · '.e($h['motivo']):'' ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de precio registrados.</p><?php endif; ?>
+                    <h3>Estados de propiedades</h3><?php if($stateHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Usuario</th><th>Cambio</th><th>Motivo</th></tr></thead><tbody><?php foreach($stateHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td translate="no"><?= e($h['titulo']) ?></td><td translate="no"><?= e($h['nombre'].' '.$h['apellido']) ?></td><td><?= e($h['anterior'].' → '.$h['nuevo']) ?></td><td><?= e($h['motivo']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de estado registrados.</p><?php endif; ?>
+                    <h3>Precios</h3><?php if($priceHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Propiedad</th><th>Operación</th><th>Precio anterior</th><th>Precio nuevo</th><th>Usuario / motivo</th></tr></thead><tbody><?php foreach($priceHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td translate="no"><?= e($h['titulo']) ?></td><td><?= e($h['operacion']) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_anterior'],2,',','.')) ?></td><td><?= e($h['moneda'].' '.number_format((float)$h['precio_nuevo'],2,',','.')) ?></td><td><?= e($h['nombre'].' '.$h['apellido']) ?><?= $h['motivo']?' · '.e($h['motivo']):'' ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin cambios de precio registrados.</p><?php endif; ?>
                     <h3>Asignaciones</h3><?php if($assignmentHistory): ?><div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Elemento</th><th>Agente anterior</th><th>Agente nuevo</th><th>Registrado por</th><th>Motivo</th></tr></thead><tbody><?php foreach($assignmentHistory as $h): ?><tr><td><?= e(date('d/m/Y H:i',strtotime($h['fecha']))) ?></td><td><?= e($h['tipo_entidad'].' #'.$h['id_entidad']) ?></td><td><?= e(trim(($h['anterior_nombre']??'').' '.($h['anterior_apellido']??''))?:'Sin asignar') ?></td><td><?= e(trim(($h['nuevo_nombre']??'').' '.($h['nuevo_apellido']??''))?:'Sin asignar') ?></td><td><?= e($h['autor_nombre'].' '.$h['autor_apellido']) ?></td><td><?= e($h['motivo']??'') ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>Sin reasignaciones registradas.</p><?php endif; ?>
                 </div>
 
@@ -1260,8 +1260,8 @@ function person_options(array $people, int $selected = 0): void
                         <details class="record">
                             <summary>
                                 <span>
-                                    <strong><?= e($person['nombre'] . ' ' . $person['apellido']) ?></strong>
-                                    <small><?= e($person['email']) ?></small>
+                                    <strong translate="no"><?= e($person['nombre'] . ' ' . $person['apellido']) ?></strong>
+                                    <small translate="no"><?= e($person['email']) ?></small>
                                 </span>
                                 <span class="status <?= $person['activo'] ? 'blue' : 'gray' ?>">
                                     <?= e($person['rol']) ?> · <?= $person['activo'] ? 'Activo' : 'Inactivo' ?>
@@ -1477,8 +1477,8 @@ function person_options(array $people, int $selected = 0): void
                                 <tbody>
                                     <?php foreach ($rows as $row): ?>
                                         <tr>
-                                            <td><?= e($row['titulo']) ?></td>
-                                            <td><?= e($row['nombre'] . ' ' . $row['apellido']) ?></td>
+                                            <td translate="no"><?= e($row['titulo']) ?></td>
+                                            <td translate="no"><?= e($row['nombre'] . ' ' . $row['apellido']) ?></td>
                                             <td><?= e($row['moneda'] . ' ' . number_format((float)$row['monto'], 0, ',', '.')) ?></td>
                                             <td><?= e(date('d/m/Y', strtotime($row['fecha']))) ?></td>
                                             <td>
@@ -1513,7 +1513,7 @@ function person_options(array $people, int $selected = 0): void
 
                 <div class="content-card">
                     <h2>Tu cuenta</h2>
-                    <p><?= e($user['name'] . ' ' . $user['surname'] . ' · ' . $user['email']) ?></p>
+                    <p translate="no"><?= e($user['name'] . ' ' . $user['surname'] . ' · ' . $user['email']) ?></p>
                     <a class="btn" href="/Inmobiliaria/cuenta.php">Editar perfil y contraseña</a>
                 </div>
 

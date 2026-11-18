@@ -117,8 +117,8 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                     <?php foreach (array_slice($requests, 0, 4) as $request): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= e($request['titulo']) ?></strong><br>
-                                                <small><?= e($request['localidad']) ?></small>
+                                                <strong translate="no"><?= e($request['titulo']) ?></strong><br>
+                                                <small translate="no"><?= e($request['localidad']) ?></small>
                                             </td>
                                             <td><?= e($request['operacion']) ?></td>
                                             <td><?= e(date('d/m/Y', strtotime($request['fecha_solicitud']))) ?></td>

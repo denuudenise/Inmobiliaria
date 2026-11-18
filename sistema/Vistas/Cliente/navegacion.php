@@ -1,5 +1,5 @@
 <aside class="side-card">
-  <div class="side-user"><div class="avatar">♙</div><div><strong><?= e($user['name'] . ' ' . $user['surname']) ?></strong><small><?= e($user['email']) ?></small></div></div>
+  <div class="side-user"><div class="avatar">♙</div><div><strong translate="no"><?= e($user['name'] . ' ' . $user['surname']) ?></strong><small translate="no"><?= e($user['email']) ?></small></div></div>
   <div class="side-nav">
     <a class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>" href="/Inmobiliaria/cliente/index.php"><span class="nav-icon">⌂</span>Resumen</a>
     <a class="<?= ($activePage ?? '') === 'perfil' ? 'active' : '' ?>" href="/Inmobiliaria/cuenta.php"><span class="nav-icon">♙</span>Mi perfil</a>

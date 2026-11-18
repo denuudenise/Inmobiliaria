@@ -173,7 +173,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
 
                     
                     <div class="property-info">
-                        <h3><?= e($property['titulo']) ?></h3>
+                        <h3 translate="no"><?= e($property['titulo']) ?></h3>
 
                         <div class="property-place"><span aria-hidden="true">⌖</span> <?= e($property['localidad']) ?></div>
 

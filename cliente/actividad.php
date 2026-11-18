@@ -68,7 +68,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                         </summary>
 
                         <div class="record-body">
-                            <p><?= nl2br(e($row['mensaje'])) ?></p>
+                            <p translate="no"><?= nl2br(e($row['mensaje'])) ?></p>
 
                             <p class="notice">
                                 <?= nl2br(e($row['respuesta'] ?: 'El agente todavía no respondió. Podés volver a esta sección para ver las novedades.')) ?>

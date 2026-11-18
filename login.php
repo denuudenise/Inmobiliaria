@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorMessage = 'El correo o la contraseña no son correctos.';
         } else {
             session_regenerate_id(true);
+            $_SESSION['auth_fingerprint'] = hash('sha256', $user['password_hash']);
             $_SESSION['user'] = [
                 'id' => (int)$user['id_usuario'],
                 'name' => $user['nombre'],
@@ -46,6 +47,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
     <div style="padding:48px 42px;display:flex;flex-direction:column;justify-content:center"><h1 class="serif" style="font-size:32px;margin:0 0 8px">Iniciar sesión</h1><p class="content-subtitle">Ingresá con tu cuenta para acceder a tus funcionalidades.</p>
       <?php if ($errorMessage): ?><div role="alert" style="background:#fff0ed;border:1px solid #f0c8bd;color:#8d4637;border-radius:8px;padding:11px;margin:0 0 15px;font-size:12px"><?= e($errorMessage) ?></div><?php endif; ?>
       <form method="post" class="modal-form" style="gap:16px"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><div class="field"><label for="email">Correo electrónico</label><input id="email" name="email" type="email" maxlength="150" value="<?= e((string)($_POST['email'] ?? '')) ?>" autocomplete="username" title="Formato esperado: nombre@dominio.com." required><?php if(isset($fieldErrors['email'])): ?><small class="field-error"><?= e($fieldErrors['email']) ?></small><?php endif; ?></div><div class="field"><label for="password">Contraseña</label><input id="password" name="password" type="password" maxlength="4096" autocomplete="current-password" required><?php if(isset($fieldErrors['password'])): ?><small class="field-error"><?= e($fieldErrors['password']) ?></small><?php endif; ?></div><button class="btn" type="submit">Iniciar sesión</button></form>
+      <p><a class="text-link" href="/Inmobiliaria/recuperar-password.php">¿Olvidaste tu contraseña?</a></p>
       <div style="margin-top:20px;text-align:center;color:var(--muted);font-size:12px">¿No tenés una cuenta? <a class="text-link" href="/Inmobiliaria/registro.php">Registrate</a></div>
     </div>
   </div>

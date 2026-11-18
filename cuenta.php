@@ -23,11 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('La nueva contraseña debe tener al menos 8 caracteres y coincidir con la confirmación.');
             }
 
+            $newPasswordHash = password_hash($password, PASSWORD_DEFAULT);
             execute_sql(
                 'UPDATE usuarios SET password_hash=? WHERE id_usuario=?',
-                [password_hash($password, PASSWORD_DEFAULT), $user['id']]
+                [$newPasswordHash, $user['id']]
             );
 
+            $_SESSION['auth_fingerprint'] = hash('sha256', $newPasswordHash);
             session_regenerate_id(true);
 
  
@@ -102,7 +104,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="profile-person">
                 <div class="avatar"><?= e(mb_substr($user['name'], 0, 1)) ?></div>
                 <div>
-                    <h3><?= e($user['name'] . ' ' . $user['surname']) ?></h3>
+                    <h3 translate="no"><?= e($user['name'] . ' ' . $user['surname']) ?></h3>
                     <p><?= e($user['role']) ?> · <?= e($user['email']) ?></p>
                 </div>
             </div>

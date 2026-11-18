@@ -103,8 +103,8 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                     <?php foreach ($sales as $sale): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= e($sale['titulo']) ?></strong><br>
-                                                <small><?= e($sale['localidad']) ?></small>
+                                                <strong translate="no"><?= e($sale['titulo']) ?></strong><br>
+                                                <small translate="no"><?= e($sale['localidad']) ?></small>
                                             </td>
                                             <td><?= e(date('d/m/Y', strtotime($sale['fecha_cierre']))) ?></td>
                                             <td><?= e($sale['moneda']) ?> <?= e(number_format((float)$sale['precio_final'], 0, ',', '.')) ?></td>
@@ -145,8 +145,8 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                                     <?php foreach ($rentals as $rental): ?>
                                         <tr>
                                             <td>
-                                                <strong><?= e($rental['titulo']) ?></strong><br>
-                                                <small><?= e($rental['localidad']) ?></small>
+                                                <strong translate="no"><?= e($rental['titulo']) ?></strong><br>
+                                                <small translate="no"><?= e($rental['localidad']) ?></small>
                                             </td>
                                             <td>
                                                 <?= e(date('d/m/Y', strtotime($rental['fecha_inicio']))) ?><?= $rental['fecha_fin'] ? ' – ' . e(date('d/m/Y', strtotime($rental['fecha_fin']))) : '' ?>

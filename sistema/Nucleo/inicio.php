@@ -41,7 +41,7 @@ function verify_csrf(): void
     $sent = $_POST['csrf_token'] ?? '';
     if (!is_string($sent) || !hash_equals(csrf_token(), $sent)) {
         http_response_code(403);
-        exit('La sesión del formulario venció. Volvé atrás y reintentá.');
+        ui_error('La sesión del formulario venció. Volvé atrás y reintentá.');
     }
 }
 
@@ -69,13 +69,13 @@ function require_user(array $roles = ['Cliente','Agente','Administrador']): arra
 {
     $user = current_user();
     if (!$user) redirect('/Inmobiliaria/login.php');
-    $statement = Database::connection()->prepare('SELECT u.activo,r.nombre AS rol FROM usuarios u JOIN roles r ON r.id_rol=u.id_rol WHERE u.id_usuario=?');
+    $statement = Database::connection()->prepare('SELECT u.activo,u.password_hash,r.nombre AS rol FROM usuarios u JOIN roles r ON r.id_rol=u.id_rol WHERE u.id_usuario=?');
     $statement->execute([$user['id']]);
     $record = $statement->fetch();
-    if (!$record || !$record['activo']) { unset($_SESSION['user']); redirect('/Inmobiliaria/login.php'); }
+    if (!$record || !$record['activo'] || !hash_equals(hash('sha256', $record['password_hash']), (string)($_SESSION['auth_fingerprint'] ?? ''))) { unset($_SESSION['user']); redirect('/Inmobiliaria/login.php'); }
     $_SESSION['user']['role'] = $record['rol'];
     $user = $_SESSION['user'];
-    if (!in_array($user['role'], $roles, true)) { http_response_code(403); exit('No tenés permisos para acceder a esta sección.'); }
+    if (!in_array($user['role'], $roles, true)) { http_response_code(403); ui_error('No tenés permisos para acceder a esta sección.'); }
     return $user;
 }
 function query_rows(string $sql, array $params = []): array
@@ -92,3 +92,12 @@ function notice(): void {
     if (isset($_SESSION['notice'])) { echo '<div class="notice" role="status">'.e($_SESSION['notice']).'</div>'; unset($_SESSION['notice']); }
 }
 
+
+function ui_error(string $message): never
+{
+    $pageTitle = $message;
+    require __DIR__ . '/../Vistas/Diseno/encabezado.php';
+    echo '<section class="section"><p role="alert">' . e($message) . '</p></section>';
+    require __DIR__ . '/../Vistas/Diseno/pie.php';
+    exit;
+}

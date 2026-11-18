@@ -123,8 +123,8 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="content-card property-summary">
                 <span class="status blue"><?= e($property['tipo']) ?></span>
 
-                <h1><?= e($property['titulo']) ?></h1>
-                <p><?= e($property['localidad']) ?></p>
+                <h1 translate="no"><?= e($property['titulo']) ?></h1>
+                <p translate="no"><?= e($property['localidad']) ?></p>
 
                 <div class="offer-summary property-detail-offers">
 <?php foreach ((new OfertaDAO(Database::connection()))->read('propiedad',$id) as $offer): ?><p><strong><?= e($offer['nombre']) ?></strong><span class="property-offer-price"><?= e($offer['moneda'].' '.number_format((float)$offer['precio'],2,',','.')) ?><?= (int)$offer['id_tipo_transaccion']!==1?' <small>/ mes</small>':'' ?></span></p><?php endforeach; ?>
@@ -172,7 +172,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="content-card property-description-card">
                 <h2>Sobre esta propiedad</h2>
 
-                <p class="description"><?= nl2br(e($property['descripcion'])) ?></p>
+                <p class="description" translate="no"><?= nl2br(e($property['descripcion'])) ?></p>
 
                 <?php
                 $propertyOffers = (new OfertaDAO(Database::connection()))->read('propiedad', $id);

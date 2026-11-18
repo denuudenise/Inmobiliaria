@@ -17,7 +17,7 @@ $r = query_rows(
 
 if (!$r) {
     http_response_code(404);
-    exit('Solicitud no encontrada.');
+    ui_error('Solicitud no encontrada.');
 }
 
 $error = '';
@@ -127,7 +127,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
     <a class="text-link" href="/Inmobiliaria/cliente/solicitudes.php">← Mis solicitudes</a>
 
-    <h1><?= e($r['titulo']) ?></h1><?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-resumen.php'; ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= $id ?>">Documentación privada e impuestos</a></p>
+    <h1 translate="no"><?= e($r['titulo']) ?></h1><?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-resumen.php'; ?><p><a class="btn btn-outline" href="/Inmobiliaria/ficha-privada.php?tipo=solicitud&amp;id=<?= $id ?>">Documentación privada e impuestos</a></p>
 
     <?php notice(); ?>
 
@@ -139,7 +139,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
 
         <span class="status blue"><?= e($r['estado']) ?></span>
 
-        <p><?= e($r['direccion'] . ', ' . $r['localidad']) ?></p>
+        <p translate="no"><?= e($r['direccion'] . ', ' . $r['localidad']) ?></p>
 
      
         <?php if ($r['motivo_rechazo']): ?>
@@ -202,7 +202,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
         <?php else: ?>
 
            
-            <p><?= nl2br(e($r['descripcion'])) ?></p>
+            <p translate="no"><?= nl2br(e($r['descripcion'])) ?></p>
 
             <p>El equipo ya procesó esta solicitud. Consultá la publicación en Mis propiedades.</p>
 

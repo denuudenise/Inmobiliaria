@@ -11,7 +11,7 @@ try {
     if (!preg_match('/^[a-f0-9]{48}\.(pdf|jpg|png|webp)$/D',$doc['archivo'])) throw new RuntimeException('Archivo no disponible en este equipo.');
     $path=__DIR__.'/sistema/privados/'.$doc['archivo'];
     if (!is_file($path)) throw new RuntimeException('Archivo no disponible.');
-} catch (RuntimeException $e) { http_response_code(404); exit('Documento no disponible.'); }
+} catch (RuntimeException $e) { http_response_code(404); ui_error('Documento no disponible.'); }
 header('Content-Type: '.(new finfo(FILEINFO_MIME_TYPE))->file($path));
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, private');

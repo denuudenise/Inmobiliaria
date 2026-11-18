@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded',()=>{
    const base=form.querySelector('[name=impuesto_base]').value,rate=form.querySelector('[name=impuesto_porcentaje]').value;
    const currency=form.querySelector('[name=impuesto_moneda]').value;
    const total=form.querySelector('[data-tax-total]');
-   total.textContent=base!==''&&rate!==''&&Number(base)>0&&Number(rate)>=0&&Number(rate)<=100 ? currency+' '+(Math.round(Math.round(Number(base)*100)*Math.round(Number(rate)*100)/10000)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  };form.addEventListener('input',calculate);calculate();
+   total.textContent=base!==''&&rate!==''&&Number(base)>0&&Number(rate)>=0&&Number(rate)<=100 ? currency+' '+(Math.round(Math.round(Number(base)*100)*Math.round(Number(rate)*100)/10000)/100).toLocaleString(document.documentElement.lang==='en'?'en-US':'es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  };form.addEventListener('input',calculate);document.addEventListener('ui-language-change',calculate);calculate();
  });
  document.querySelectorAll('[data-private-files]').forEach(input=>{
   const status=document.createElement('p');status.className='help-text';status.setAttribute('role','status');input.after(status);
@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded',()=>{
    if(count>8)error='Máximo 8 documentos privados por envío.';
    if(files.some(f=>f.size>2097152||f.size===0))error='Cada documento debe pesar entre 1 byte y 2 MB.';
    if(files.some(f=>!input.accept.split(',').includes(f.type)))error='Usá PDF, JPG, PNG o WEBP.';
-   input.setCustomValidity(error);status.textContent=error||files.map(f=>f.name+' · listo para enviar').join(' / ');
+   WebIdioma.setValidity(input, error);status.textContent=error||files.map(f=>f.name+' · listo para enviar').join(' / ');
    // La validación total se reevalúa en todos los campos al cambiar la selección.
-   input.form.querySelectorAll('[data-private-files]').forEach(other=>{if(other!==input && other.validationMessage==='Máximo 8 documentos privados por envío.' && count<=8)other.setCustomValidity('');});
+   input.form.querySelectorAll('[data-private-files]').forEach(other=>{if(other!==input && other.validationMessage===WebIdioma.text('Máximo 8 documentos privados por envío.') && count<=8)WebIdioma.setValidity(other, '');});
   });
  });
 });
@@ -32,8 +32,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         const details=row.querySelector('[data-offer-details]'),minimum=row.querySelector('[data-minimum-price]');
         if(details)details.hidden=!check.checked;
     price.disabled=!check.checked;currency.disabled=!check.checked;price.required=check.checked;
-        if(minimum){minimum.disabled=!check.checked;minimum.required=check.checked;minimum.setCustomValidity(check.checked&&minimum.value!==''&&Number(minimum.value)>Number(price.value)?'El monto mínimo no puede superar el precio de venta.':'');}
-    check.setCustomValidity(index===0&&!any?'Seleccioná al menos una operación.':'');row.classList.toggle('offer-selected',check.checked);
+        if(minimum){minimum.disabled=!check.checked;minimum.required=check.checked;WebIdioma.setValidity(minimum, check.checked&&minimum.value!==''&&Number(minimum.value)>Number(price.value)?'El monto mínimo no puede superar el precio de venta.':'');}
+    WebIdioma.setValidity(check, index===0&&!any?'Seleccioná al menos una operación.':'');row.classList.toggle('offer-selected',check.checked);
    });
     };group.addEventListener('change',update);group.addEventListener('input',update);update();
  });
