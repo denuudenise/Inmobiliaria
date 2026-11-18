@@ -101,8 +101,6 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     src="<?= e($photos[0]['url_archivo'] ?? '/Inmobiliaria/recursos/imagenes/propiedad.svg') ?>"
                     alt="<?= e($property['titulo']) ?>"
                 >
-                <?php if($videos): ?><video id="galleryVideo" class="gallery-main" controls playsinline preload="metadata" src="<?= e($videos[0]['url_archivo']) ?>" <?= $photos ? 'hidden' : '' ?>></video><?php endif; ?>
-
                 <div class="gallery-thumbs">
                     <?php foreach ($photos as $i => $photo): ?>
                         <button
@@ -116,7 +114,8 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                     <?php endforeach; ?>
                 </div>
 
-                    <?php foreach ($videos as $i=>$video): ?><button type="button" data-gallery-kind="video" data-gallery="<?= e($video['url_archivo']) ?>" aria-label="Reproducir video" aria-pressed="<?= !$photos && $i===0?'true':'false' ?>"><span>▶ Video</span></button><?php endforeach; ?>
+                <?php foreach ($videos as $i=>$video): ?><button type="button" class="gallery-video-thumb" data-gallery-kind="video" data-gallery="<?= e($video['url_archivo']) ?>" aria-label="Reproducir video <?= $i + 1 ?>" aria-pressed="<?= !$photos && $i===0?'true':'false' ?>"><span>▶ Video <?= count($videos) > 1 ? $i + 1 : '' ?></span></button><?php endforeach; ?>
+                <?php if($videos): ?><video id="galleryVideo" class="gallery-player" controls playsinline preload="metadata" src="<?= e($videos[0]['url_archivo']) ?>" <?= $photos ? 'hidden' : '' ?>></video><?php endif; ?>
             </div>
 
          
@@ -236,6 +235,16 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                 <h2>¿Te interesa?</h2>
                 <p class="content-subtitle">Consultá por una visita o pedí más información.</p>
 
+                <div class="property-contact-options">
+                    <p class="help-text">Hablá con nuestro equipo por el medio que prefieras:</p>
+                    <div class="property-contact-actions">
+                        <a class="btn" href="tel:+541155550182">Llamar · +54 11 5555-0182</a>
+                        <a class="btn btn-soft" href="https://wa.me/541155550182?text=<?= urlencode('Hola, quisiera consultar por la propiedad: '.$property['titulo']) ?>" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                        <a class="btn btn-outline" href="mailto:nuevohogar.inmobiliaria.demo@gmail.com?subject=<?= rawurlencode('Consulta por '.$property['titulo']) ?>">Enviar correo</a>
+                        <?php if (!current_user() || current_user()['role'] === 'Cliente'): ?><a class="text-link property-query-link" href="#formulario-consulta">Enviar consulta desde el sitio ↓</a><?php endif; ?>
+                    </div>
+                </div>
+
                 <?php if ($error): ?>
                     <div class="notice error" role="alert"><?= e($error) ?></div>
                 <?php endif; ?>
@@ -257,7 +266,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
                         </div>
                     </details>
 
-                    <form method="post" class="modal-form">
+                    <form id="formulario-consulta" method="post" class="modal-form">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="accion" value="enviar_consulta">
 
@@ -284,7 +293,7 @@ require __DIR__ . '/sistema/Vistas/Diseno/encabezado.php';
 
                    
                     <p>Dejanos tus datos de contacto y el agente de la propiedad se comunicará con vos. No necesitás registrarte.</p>
-                    <form method="post" class="modal-form">
+                    <form id="formulario-consulta" method="post" class="modal-form">
                         <?php csrf_field(); ?><input type="hidden" name="accion" value="enviar_consulta">
                         <div class="field"><label for="nombre">Tu nombre</label><input id="nombre" name="nombre" required minlength="2" maxlength="120" value="<?= e((string)($_POST['nombre'] ?? '')) ?>"></div>
                         <div class="field"><label for="email">Correo electrónico</label><input id="email" name="email" type="email" maxlength="190" value="<?= e((string)($_POST['email'] ?? '')) ?>"></div>

@@ -24,7 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
     try {const r=await fetch('/Inmobiliaria/favorito.php',{method:'POST',body:new URLSearchParams({id:button.dataset.favorite,guardar:saved?'1':'0',csrf_token:document.body.dataset.csrf})}); if(!r.ok) throw new Error(); const result=await r.json();if(!result.ok)throw new Error();setSaved(button,saved);notify(saved?'Propiedad guardada en tus favoritos.':'Propiedad quitada de favoritos.');if(!saved && location.pathname.endsWith('/actividad.php'))button.closest('article')?.remove();}
     catch {notify('No se pudo guardar el cambio. Intentá nuevamente.');} finally{button.disabled=false;}
   }));
-  document.querySelectorAll('[data-gallery]').forEach(button=>button.addEventListener('click',()=>{const image=byId('galleryMain'),video=byId('galleryVideo');if(button.dataset.galleryKind==='video'){if(image)image.hidden=true;if(video){video.hidden=false;video.src=button.dataset.gallery;video.play().catch(()=>{});}}else{if(video){video.pause();video.hidden=true;}if(image){image.hidden=false;image.src=button.dataset.gallery;}}document.querySelectorAll('[data-gallery]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
+  document.querySelectorAll('[data-gallery]').forEach(button=>button.addEventListener('click',()=>{
+    const image=byId('galleryMain'),video=byId('galleryVideo');
+    if(button.dataset.galleryKind==='video'){
+      if(video){
+        if(video.getAttribute('src')!==button.dataset.gallery){video.src=button.dataset.gallery;}
+        video.hidden=false;
+        video.play().catch(()=>{});
+      }
+    }else{
+      if(video){video.pause();video.hidden=true;}
+      if(image){image.hidden=false;image.src=button.dataset.gallery;}
+    }
+    document.querySelectorAll('[data-gallery]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  }));
   document.querySelectorAll('[data-media-manager]').forEach(manager=>{
     const list=manager.querySelector('[data-sort-list]'),input=manager.querySelector('[data-new-photos]'),hidden=manager.querySelector('[data-order-value]');if(!list||!input||!hidden)return;
     const sync=()=>{[...list.children].forEach((item,i)=>{const label=item.querySelector('[data-position-label]');if(label)label.textContent=i===0?'Portada':`Foto ${i+1}`;item.querySelector('[data-move="up"]').disabled=i===0;item.querySelector('[data-move="down"]').disabled=i===list.children.length-1;});hidden.value=JSON.stringify([...list.children].map(item=>item.dataset.mediaItem));};
