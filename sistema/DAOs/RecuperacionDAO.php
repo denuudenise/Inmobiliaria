@@ -44,7 +44,7 @@ final class RecuperacionDAO
         } catch (Throwable $error) {
             $this->db->prepare('DELETE FROM recuperaciones_password WHERE token_hash=?')->execute([$hash]);
             // The public response is identical for registered and unknown addresses.
-            error_log('No se pudo enviar un correo de recuperación. Revisar SMTP.');
+            error_log('No se pudo enviar un correo de recuperación: ' . get_class($error) . ' — ' . $error->getMessage());
         }
     }
 

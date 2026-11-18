@@ -7,17 +7,30 @@ final class CorreoRecuperacion
 
     public function comprobar(): void
     {
-        $url = $this->config['base_url'];
+        if (!extension_loaded('mbstring')) {
+            throw new RuntimeException('La extensión PHP mbstring no está habilitada.');
+        }
+        if (!extension_loaded('openssl')) {
+            throw new RuntimeException('La extensión PHP openssl no está habilitada.');
+        }
+
+        $username = trim((string)($this->config['username'] ?? ''));
+        $password = (string)($this->config['password'] ?? '');
+        $url = trim((string)($this->config['base_url'] ?? ''));
         $host = parse_url($url, PHP_URL_HOST);
         $scheme = parse_url($url, PHP_URL_SCHEME);
         $local = in_array($host, ['localhost', '127.0.0.1'], true);
-        if (!filter_var($this->config['username'], FILTER_VALIDATE_EMAIL)
-            || $this->config['password'] === ''
-            || !filter_var($url, FILTER_VALIDATE_URL)
+        if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Configurá un username válido en correo.local.php.');
+        }
+        if (trim($password) === '') {
+            throw new RuntimeException('Falta password en correo.local.php; verificá que se haya guardado en esta instalación.');
+        }
+        if (!filter_var($url, FILTER_VALIDATE_URL)
             || ($scheme !== 'https' && !($scheme === 'http' && $local))
             || parse_url($url, PHP_URL_QUERY) || parse_url($url, PHP_URL_FRAGMENT)
             || parse_url($url, PHP_URL_USER)) {
-            throw new RuntimeException('Configuración de correo incompleta.');
+            throw new RuntimeException('Configurá un base_url válido en correo.local.php.');
         }
     }
 

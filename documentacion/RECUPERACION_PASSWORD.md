@@ -7,7 +7,7 @@
 4. Copiar configuracion/correo.local.ejemplo.php como configuracion/correo.local.php. Completar username, password y base_url.
    - username: Gmail del proyecto.
    - password: contraseña de aplicación de Google, NO la contraseña habitual. Activar verificación en dos pasos. Instrucciones: https://support.google.com/accounts/answer/185833?hl=es
-   - base_url: URL pública HTTPS exacta donde está instalada la aplicación, sin barra final. El enlace enviado se construye desde esta configuración, no desde el encabezado Host.
+   - base_url: en XAMPP local, `http://localhost/Inmobiliaria`; en el servidor publicado, la URL pública HTTPS exacta. Sin barra final. El enlace enviado se construye desde esta configuración, no desde el encabezado Host.
 5. SMTP usa smtp.gmail.com, puerto 587 y STARTTLS. El alojamiento debe permitir conexiones salientes, PHP OpenSSL y PDO MySQL.
 6. Probar con una cuenta propia registrada: recibir correo, abrir enlace, cambiar clave e ingresar. Revisar spam si no llega.
 

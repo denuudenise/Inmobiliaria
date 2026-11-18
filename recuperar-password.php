@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 static fn(string $to, string $token) => $mailer->enviar($to, $token, ($_COOKIE['inmo_lang'] ?? 'es') === 'en' ? 'en' : 'es'));
             $message = 'Si el correo corresponde a una cuenta activa, recibirás un enlace para cambiar tu contraseña. Revisá también la carpeta de spam.';
         } catch (Throwable $exception) {
-            error_log('Recuperación no disponible. Revisar configuración de correo y migración 010.');
+            error_log('Recuperación no disponible: ' . get_class($exception) . ' — ' . $exception->getMessage());
             $error = 'No pudimos procesar la solicitud. Intentá nuevamente más tarde.';
         }
     }
