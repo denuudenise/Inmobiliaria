@@ -3582,3 +3582,279 @@ button:disabled {
   padding: 8px 4px;
   font-size: 12px
 }
+.about-page {
+  max-width: none;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0
+}
+.about-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(40px, 7vw, 110px);
+  min-height: min(690px, calc(100vh - 82px));
+  padding: clamp(48px, 7vw, 100px) max(6vw, calc((100vw - 1480px) / 2));
+  overflow: hidden;
+  background: linear-gradient(110deg, #b9d4e7 0%, #e2eef5 62%, #f7fafc 100%);
+}
+.about-hero::before,
+.about-hero::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  pointer-events: none;
+}
+.about-hero::before {
+  inset: 0 0 0 36%;
+  background: rgba(255, 255, 255, .2);
+  clip-path: polygon(42% 0, 100% 0, 100% 100%, 0 100%);
+}
+.about-hero::after {
+  width: 58vw;
+  height: 58vw;
+  right: 11%;
+  top: 13%;
+  border: 1px solid rgba(45, 101, 143, .1);
+  transform: rotate(45deg);
+}
+.about-visual,
+.about-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.about-visual {
+  min-height: 520px;
+}
+.about-image-main,
+.about-image-detail {
+  position: absolute;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 20px 55px rgba(44, 26, 62, .19);
+}
+.about-image-main {
+  inset: 0 15% 4% 0;
+  width: 78%;
+  height: 94%;
+  border-radius: 18px;
+}
+.about-image-detail {
+  right: 0;
+  bottom: 0;
+  width: 55%;
+  height: 52%;
+  border: 8px solid #e5dced;
+  border-radius: 18px;
+}
+.about-image-mark {
+  position: absolute;
+  top: 24px;
+  right: 13%;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 50%;
+  color: #28658d;
+  background: rgba(255,255,255,.83);
+  font-size: 32px;
+}
+.about-copy {
+  max-width: 700px;
+}
+.about-copy .eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: #28658d;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.about-copy h1 {
+  margin: 0 0 20px;
+  color: #285f83;
+  font-size: clamp(36px, 4.2vw, 58px);
+  line-height: 1.08;
+}
+.about-copy p {
+  margin: 0 0 14px;
+  color: #344050;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.about-copy .btn {
+  margin-top: 4px;
+  background: #285f83;
+  border-color: #285f83;
+}
+.about-values,
+.about-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.about-values,
+.about-process,
+.about-cta {
+  width: min(calc(100% - 56px), 1240px);
+  margin-right: auto;
+  margin-left: auto;
+}
+.about-card,
+.about-step {
+  position: relative;
+  padding: 27px;
+  overflow: hidden;
+  border: 1px solid #e2eaf0;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff 0%, #fbfdff 100%);
+  box-shadow: 0 8px 24px rgba(24, 61, 85, .055);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.about-card::before,
+.about-step::before {
+  position: absolute;
+  top: 0;
+  right: 22px;
+  left: 22px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #2c789f, #8cc5dd);
+  content: "";
+}
+.about-card:hover,
+.about-step:hover {
+  transform: translateY(-5px);
+  border-color: #c5dce9;
+  box-shadow: 0 16px 34px rgba(24, 61, 85, .12);
+}
+.about-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 15px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #e5f3f9, #d7eaf4);
+  color: #246b91;
+  font-size: 21px;
+}
+.about-card h2,
+.about-step h3 {
+  margin: 0 0 9px;
+  font-size: 18px;
+}
+.about-card p,
+.about-step p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.about-process {
+  margin-top: 40px;
+}
+.about-process .section-heading h2 {
+  color: #173f59;
+  font-size: clamp(25px, 3vw, 32px);
+}
+.about-process .section-heading p {
+  color: #718496;
+}
+.about-step > span {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #287ca5;
+  font: 600 24px 'Playfair Display', Georgia, serif;
+}
+.about-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 28px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  background: linear-gradient(115deg, #12384f, #1a5778 72%, #26799b);
+  color: #e6eef0;
+  box-shadow: 0 16px 34px rgba(18, 56, 79, .18);
+}
+.about-cta::after {
+  position: absolute;
+  top: -100px;
+  right: 18%;
+  width: 270px;
+  height: 270px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%;
+  box-shadow: 0 0 0 28px rgba(255,255,255,.035), 0 0 0 58px rgba(255,255,255,.025);
+  content: "";
+  pointer-events: none;
+}
+.about-cta h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: 23px;
+}
+.about-cta p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #c4d4da;
+}
+.about-cta .btn {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  background: #f5fbff;
+  color: #174b68;
+  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+}
+@media(max-width:760px) {
+  .about-hero {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    min-height: 0;
+    padding: 38px 22px 46px;
+  }
+  .about-visual {
+    min-height: clamp(290px, 78vw, 440px);
+  }
+  .about-image-main {
+    right: 12%;
+    width: 82%;
+  }
+  .about-image-detail {
+    width: 53%;
+    height: 48%;
+    border-width: 5px;
+  }
+  .about-copy h1 {
+    font-size: clamp(35px, 10vw, 48px);
+  }
+  .about-values,
+  .about-steps {
+    grid-template-columns: 1fr;
+  }
+  .about-card,
+  .about-step {
+    padding: 20px;
+  }
+  .about-cta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .about-cta .btn {
+    text-align: center;
+  }
+}

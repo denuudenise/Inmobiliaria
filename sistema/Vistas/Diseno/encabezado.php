@@ -81,6 +81,10 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
             <a href="/Inmobiliaria/index.php" class="nav-link">Inicio</a>
         </div>
 
+        <div class="nav-item">
+            <a href="/Inmobiliaria/nosotros.php" class="nav-link">Nosotros</a>
+        </div>
+
         <!-- Menú "Comprar" -->
         <div class="nav-item" id="buyNav">
             <button class="nav-link" id="buyMenuButton" aria-expanded="false">
