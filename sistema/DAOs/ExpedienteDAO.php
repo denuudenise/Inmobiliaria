@@ -88,6 +88,18 @@ final class ExpedienteDAO
         }
         return $result;
     }
+    /** Elimina un documento únicamente de la ficha autorizada y devuelve su ruta local segura. */
+    public function deleteDocument(array $context, int $documentId): ?string
+    {
+        if (!$this->db->inTransaction() || $documentId<1) throw new LogicException('Se requiere una transacción y un documento válido.');
+        $field=$context['kind']==='propiedad'?'id_propiedad':'id_solicitud';
+        $q=$this->db->prepare("SELECT archivo FROM documentos WHERE id_documento=? AND $field=? FOR UPDATE");
+        $q->execute([$documentId,$context['id']]); $document=$q->fetch();
+        if (!$document) throw new RuntimeException('El documento ya no pertenece a esta ficha.');
+        $this->db->prepare("DELETE FROM documentos WHERE id_documento=? AND $field=?")->execute([$documentId,$context['id']]);
+        $filename=(string)$document['archivo'];
+        return preg_match('/^[a-f0-9]{48}\.(pdf|jpg|png|webp)$/D',$filename)?dirname(__DIR__).'/privados/'.$filename:null;
+    }
     public function link(int $request, int $property): void
     {
         foreach (['documentos','propiedad_impuestos'] as $table) $this->db->prepare("UPDATE $table SET id_propiedad=? WHERE id_solicitud=?")->execute([$property,$request]);

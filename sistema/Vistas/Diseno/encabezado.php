@@ -20,7 +20,7 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
     >
 
     <script type="application/json" id="ui-catalog"><?php readfile(__DIR__ . '/../../../recursos/idiomas/en.json'); ?></script>
-    <script src="/Inmobiliaria/recursos/scripts/idioma.js"></script>
+    <script src="/Inmobiliaria/recursos/scripts/idioma.js?v=<?= (int)filemtime(__DIR__.'/../../../recursos/scripts/idioma.js') ?>"></script>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/Inmobiliaria/recursos/estilos/estilos.css?v=<?= (int)filemtime(__DIR__.'/../../../recursos/estilos/estilos.css') ?>">
@@ -172,10 +172,19 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
 
     
     <div class="top-actions">
-        <select id="ui-language" class="language-select" aria-label="Idioma">
-            <option value="es" lang="es" translate="no">Español</option>
-            <option value="en" lang="en" translate="no">English</option>
-        </select>
+        <button
+            type="button"
+            id="ui-language-toggle"
+            class="language-switch<?= ($_COOKIE['inmo_lang'] ?? '') === 'en' ? ' is-english' : '' ?>"
+            role="switch"
+            aria-checked="<?= ($_COOKIE['inmo_lang'] ?? '') === 'en' ? 'true' : 'false' ?>"
+            aria-label="Idioma"
+            title="Cambiar idioma"
+        >
+            <span class="language-switch-label" lang="es" translate="no">ES</span>
+            <span class="language-switch-track" aria-hidden="true"><span class="language-switch-thumb"></span></span>
+            <span class="language-switch-label" lang="en" translate="no">EN</span>
+        </button>
 
         <button
             type="button"
@@ -222,8 +231,6 @@ $pageTitle = $pageTitle ?? 'Inmobiliaria Nuevo Hogar';
                 <span class="avatar-small">♙</span>
                 <span>Iniciar sesión</span>
             </a>
-
-            <a class="btn" href="/Inmobiliaria/registro.php">Registrarse</a>
 
         <?php endif; ?>
 

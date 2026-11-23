@@ -27,11 +27,13 @@ final class Archivos
         try {
             foreach ($upload['name'] as $i=>$name) {
                 if ($upload['error'][$i]===UPLOAD_ERR_NO_FILE) continue;
-                if ($upload['error'][$i]!==UPLOAD_ERR_OK || $upload['size'][$i]>2*1024*1024) throw new RuntimeException('Cada foto debe pesar hasta 2 MB.');
+                $safeName=basename(str_replace('\\','/',(string)$name));
+                if ($upload['error'][$i]!==UPLOAD_ERR_OK) throw new RuntimeException('No se pudo cargar la foto "'.$safeName.'". Revisá el archivo e intentá nuevamente.');
+                if ($upload['size'][$i]>2*1024*1024) throw new RuntimeException('La foto "'.$safeName.'" supera el límite de 2 MB.');
                 $tmp=$upload['tmp_name'][$i];
                 $mime=(new finfo(FILEINFO_MIME_TYPE))->file($tmp);
                 $extension=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime]??null;
-                if (!$extension || !is_uploaded_file($tmp)) throw new RuntimeException('Usá imágenes JPG, PNG o WEBP.');
+                if (!$extension || !is_uploaded_file($tmp)) throw new RuntimeException('La foto "'.$safeName.'" debe ser JPG, PNG o WEBP.');
                 $filename=bin2hex(random_bytes(16)).'.'.$extension;
                 if (!move_uploaded_file($tmp,$directory.'/'.$filename)) throw new RuntimeException('No se pudo guardar la foto.');
                 $paths[]='/Inmobiliaria/archivos/propiedades/'.$filename;
@@ -60,6 +62,13 @@ final class Archivos
                 if (is_file($file)) unlink($file);
             }
         }
+    }
+    public static function removeUnreferenced(PDO $db,array $paths): void
+    {
+        $check=$db->prepare('SELECT 1 FROM propiedad_multimedia WHERE url_archivo=? UNION ALL SELECT 1 FROM solicitud_multimedia WHERE url_archivo=? LIMIT 1');
+        $orphaned=[];
+        foreach(array_unique($paths) as $path){$check->execute([$path,$path]);if(!$check->fetchColumn())$orphaned[]=$path;}
+        self::remove($orphaned);
     }
     public static function orderedImages(string $json, array $existing, int $newCount): array
     {

@@ -8,7 +8,7 @@ $mediaVideo=$mediaVideos[0]??null;
     <h3>Galería de la propiedad</h3>
     <p class="help-text">Ordená las fotos con las flechas. La primera será la portada que se verá en el catálogo. Después podés poner ambientes y, al final, detalles o exteriores.</p>
     <ol class="media-sort-list" data-sort-list>
-        <?php foreach($mediaPhotos as $position=>$photo): ?><li data-media-item="e:<?= (int)$photo['id_multimedia'] ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Foto <?= $position+1 ?>"><span data-position-label><?= $position===0?'Portada':'Foto '.($position+1) ?></span><button type="button" data-move="up" aria-label="Subir foto">↑</button><button type="button" data-move="down" aria-label="Bajar foto">↓</button></li><?php endforeach; ?>
+        <?php foreach($mediaPhotos as $position=>$photo): ?><li data-media-item="e:<?= (int)$photo['id_multimedia'] ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Foto <?= $position+1 ?>"><span data-position-label><?= $position===0?'Portada':'Foto '.($position+1) ?></span><button type="button" data-move="up" aria-label="Subir foto">↑</button><button type="button" data-move="down" aria-label="Bajar foto">↓</button><button type="button" data-remove-media class="media-remove" aria-label="Eliminar foto">×</button></li><?php endforeach; ?>
     </ol>
     <input type="hidden" name="orden_fotos" value="" data-order-value>
     <label for="fotos">Agregar fotos (JPG, PNG o WEBP, hasta 8 por carga; 2 MB por foto)</label>

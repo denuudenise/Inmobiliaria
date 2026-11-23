@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   
         } else {
             $db = Database::connection();
-            $paths = []; $videoPath=null; $oldVideoPaths=[];
+            $paths = []; $videoPath=null; $oldVideoPaths=[]; $oldPhotoPaths=[];
             $db->beginTransaction();
 
             try {
@@ -74,6 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $paths = Archivos::images('fotos');
+                $removePhotoIds=array_values(array_unique(array_map('intval',(array)($_POST['eliminar_fotos']??[]))));
+                $availablePhotoIds=array_map(static fn($photo)=>(int)$photo['id_multimedia'],$requestPhotos);
+                foreach($removePhotoIds as $removeId){if($removeId<1||!in_array($removeId,$availablePhotoIds,true))throw new RuntimeException('Una de las fotos seleccionadas ya no pertenece a esta solicitud.');}
+                if($removePhotoIds){$removed=array_flip($removePhotoIds);$requestPhotos=array_values(array_filter($requestPhotos,static function($photo)use($removed,&$oldPhotoPaths){if(isset($removed[(int)$photo['id_multimedia']])){$oldPhotoPaths[]=$photo['url_archivo'];return false;}return true;}));foreach($removePhotoIds as $removeId)execute_sql('DELETE FROM solicitud_multimedia WHERE id_multimedia=? AND id_solicitud=?',[$removeId,$id]);}
                 $ordered=Archivos::orderedImages((string)($_POST['orden_fotos']??''),$requestPhotos,count($paths));
 
                 execute_sql(
@@ -100,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     execute_sql('UPDATE solicitudes_publicacion SET id_tipo_transaccion=? WHERE id_solicitud=?',[$selected['id_tipo_transaccion'],$id]);
                 }
                 $db->commit();
-                Archivos::remove($oldVideoPaths);
+                Archivos::removeUnreferenced($db,[...$oldVideoPaths,...$oldPhotoPaths]);
 
                 flash('Solicitud actualizada y enviada a revisión.');
                 redirect('/Inmobiliaria/cliente/solicitud.php?id=' . $id);
@@ -185,7 +189,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                 <?php $offerKind='solicitud'; $offerId=$id; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
 <div class="field full media-manager" data-media-manager>
     <h3>Orden de las fotos</h3><p class="help-text">La primera foto será la portada. Después ordená los ambientes principales y dejá los detalles y exteriores para el final.</p>
-    <ol class="media-sort-list" data-sort-list><?php foreach($requestPhotos as $position=>$photo): ?><li data-media-item="e:<?= (int)$photo['id_multimedia'] ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Foto <?= $position+1 ?>"><span data-position-label><?= $position===0?'Portada':'Foto '.($position+1) ?></span><button type="button" data-move="up" aria-label="Subir foto">↑</button><button type="button" data-move="down" aria-label="Bajar foto">↓</button></li><?php endforeach; ?></ol><input type="hidden" name="orden_fotos" value="" data-order-value>
+    <ol class="media-sort-list" data-sort-list><?php foreach($requestPhotos as $position=>$photo): ?><li data-media-item="e:<?= (int)$photo['id_multimedia'] ?>"><img src="<?= e($photo['url_archivo']) ?>" alt="Foto <?= $position+1 ?>"><span data-position-label><?= $position===0?'Portada':'Foto '.($position+1) ?></span><button type="button" data-move="up" aria-label="Subir foto">↑</button><button type="button" data-move="down" aria-label="Bajar foto">↓</button><button type="button" data-remove-media class="media-remove" aria-label="Eliminar foto">×</button></li><?php endforeach; ?></ol><input type="hidden" name="orden_fotos" value="" data-order-value>
     <label for="fotos">Agregar fotos (hasta 8 por carga, 2 MB por foto)</label><input id="fotos" name="fotos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-new-photos>
     <div class="media-video-box"><label for="video">Video opcional (MP4, hasta 20 MB)</label><?php if($requestVideos): ?><video controls preload="metadata" src="<?= e($requestVideos[0]['url_archivo']) ?>"></video><label class="check-row"><input type="checkbox" name="eliminar_video" value="1"> Eliminar el video actual</label><?php endif; ?><input id="video" name="video" type="file" accept="video/mp4" data-property-video><?php if($requestVideos): ?><small>Al elegir otro MP4, reemplazará el actual.</small><?php endif; ?></div>
 </div>

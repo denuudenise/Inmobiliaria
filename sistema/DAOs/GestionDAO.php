@@ -58,7 +58,7 @@ final class GestionDAO
         if (!is_numeric($data['precio']??'') || (float)$data['precio']<=0 || (float)$data['precio']>9999999999 || !is_numeric($data['superficie']??'') || (float)$data['superficie']<=0 || (float)$data['superficie']>999999) throw new RuntimeException('Ingresá precio y superficie válidos.');
         foreach (['ambientes','dormitorios','banos'] as $field) if (filter_var($data[$field]??'',FILTER_VALIDATE_INT)===false || (int)$data[$field]<0 || (int)$data[$field]>100) throw new RuntimeException('Los ambientes, dormitorios y baños deben ser enteros entre 0 y 100.');
         if (!in_array($data['moneda']??'', ['USD','ARS'],true) || !query_rows('SELECT 1 FROM tipos_propiedad WHERE id_tipo_propiedad=?',[(int)($data['tipo']??0)]) || !query_rows('SELECT 1 FROM tipos_transaccion WHERE id_tipo_transaccion=?',[(int)($data['operacion']??0)])) throw new RuntimeException('Tipo, operación o moneda inválidos.');
-        $paths=[]; $videoPath=null; $oldVideoPaths=[];
+        $paths=[]; $videoPath=null; $oldVideoPaths=[]; $oldPhotoPaths=[];
         $expediente=new ExpedienteDAO($this->db);
         $this->db->beginTransaction();
         try {
@@ -91,6 +91,10 @@ final class GestionDAO
             else (new AuditoriaDAO($this->db))->record((int)$user['id'],'crear','propiedad',$id,'Propiedad creada desde panel');
             $expediente->save($id,$old['id_solicitud']??null,(int)$user['id'],$data);
             $paths=Archivos::images('fotos');
+            $removePhotoIds=array_values(array_unique(array_map('intval',(array)($data['eliminar_fotos']??[]))));
+            $availablePhotoIds=array_map(static fn($photo)=>(int)$photo['id_multimedia'],$existingPhotos);
+            foreach($removePhotoIds as $removeId){if($removeId<1||!in_array($removeId,$availablePhotoIds,true))throw new RuntimeException('Una de las fotos seleccionadas ya no pertenece a esta propiedad.');}
+            if($removePhotoIds){$removed=array_flip($removePhotoIds);$existingPhotos=array_values(array_filter($existingPhotos,static function($photo)use($removed,&$oldPhotoPaths){if(isset($removed[(int)$photo['id_multimedia']])){$oldPhotoPaths[]=$photo['url_archivo'];return false;}return true;}));foreach($removePhotoIds as $removeId)execute_sql('DELETE FROM propiedad_multimedia WHERE id_multimedia=? AND id_propiedad=?',[$removeId,$id]);}
             $order=Archivos::orderedImages((string)($data['orden_fotos']??''),$existingPhotos,count($paths));
             foreach($order as $position=>$item){
                 if($item['kind']==='existing')execute_sql('UPDATE propiedad_multimedia SET orden=? WHERE id_multimedia=? AND id_propiedad=?',[$position+1,$item['id'],$id]);
@@ -102,7 +106,7 @@ final class GestionDAO
                 if($videoPath)execute_sql("INSERT INTO propiedad_multimedia (id_propiedad,url_archivo,tipo,orden) VALUES (?,?,'Video',?)",[$id,$videoPath,count($existingPhotos)+count($paths)+1]);
             }
             $this->db->commit();
-            Archivos::remove($oldVideoPaths);
+            Archivos::removeUnreferenced($this->db,[...$oldVideoPaths,...$oldPhotoPaths]);
         } catch (Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); Archivos::remove([...$paths,...($videoPath?[$videoPath]:[])]); $expediente->cleanup(); throw $e; }
     }
 

@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = el.dataset.validate;
     const value = el.type === 'checkbox' ? '' : el.value.trim();
     const empty = el.required && (el.type === 'checkbox' ? !el.checked : value === '');
-    const valid = empty || checks[name](value, el);
+    const valid = !empty && checks[name](value, el);
     const show = force || el.dataset.touched === 'true';
     const field = el.closest('.field');
     const feedback = document.getElementById(`ayuda-${el.name}`) || (field ? field.querySelector('.field-feedback') : null);
@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const selected = rows.filter(row => row.querySelector('input[type="checkbox"]').checked);
     const feedback = group.querySelector('#ayuda-ofertas');
     let message = selected.length ? '' : 'Seleccioná al menos una operación.';
+    group.querySelectorAll('[data-offer-row] input[type="checkbox"]').forEach((checkbox,index)=>{
+      checkbox.setAttribute('aria-invalid',!selected.length && index===0?'true':'false');
+    });
     for (const row of selected) {
       const numericFields = [...row.querySelectorAll('.offer-details input[type="number"]')];
       const price = numericFields[0];
@@ -92,17 +95,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function validateRequiredDocuments() {
     let valid=true;
-    for (const [fieldName, checkboxName, label] of [['planos','faltan_planos','planos'],['escrituras','falta_escritura','escritura']]) {
+    for (const [fieldName, checkboxName, label, pronoun] of [['planos','faltan_planos','los planos','los tenés'],['escrituras','falta_escritura','la escritura','la tenés']]) {
       const input=form.querySelector(`[name="${fieldName}[]"]`);
       const missing=form.querySelector(`[name="${checkboxName}"]`);
       const hasFile=input && input.files.length>0;
       if (!hasFile && !missing?.checked) {
         valid=false;
+        input?.setAttribute('aria-invalid','true');
         input?.parentElement.classList.add('has-error');
         let message=input?.parentElement.querySelector('[data-required-document-error]');
         if(!message && input?.parentElement){message=document.createElement('small');message.dataset.requiredDocumentError='';message.className='field-feedback field-error';input.parentElement.append(message)}
-        if(message)message.textContent=`Adjuntá los ${label} o marcá que todavía no los tenés.`;
+        if(message)message.textContent=`Adjuntá ${label} o marcá que todavía no ${pronoun}.`;
       } else {
+        input?.setAttribute('aria-invalid','false');
         input?.parentElement.querySelector('[data-required-document-error]')?.remove();
         input?.parentElement.classList.remove('has-error');
       }
@@ -116,17 +121,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const input=form.querySelector('[name="fotos[]"]');
     const video=form.querySelector('[name="video"]');
     const feedback=document.getElementById('ayuda-multimedia');
-    const field=input?.closest('.field');
     if(!input)return true;
     const files=[...input.files];
-    let message='';
-    if(files.length>8)message='Podés adjuntar hasta 8 fotos.';
-    else if(files.some(file=>file.size<=0||file.size>2*1024*1024))message='Cada foto debe pesar hasta 2 MB.';
-    else if(files.some(file=>!input.accept.split(',').includes(file.type)))message='Usá fotos JPG, PNG o WEBP.';
-    else if(video?.files[0]&&(video.files[0].type!=='video/mp4'||video.files[0].size>20*1024*1024))message='El video debe ser MP4 y pesar hasta 20 MB.';
-    if(feedback)feedback.textContent=message;
-    field?.classList.toggle('has-error',Boolean(message));
-    return !message;
+    let photoMessage='';
+    let videoMessage='';
+    if(files.length>8)photoMessage='Podés adjuntar hasta 8 fotos.';
+    else {
+      const oversized=files.find(file=>file.size<=0||file.size>2*1024*1024);
+      const unsupported=files.find(file=>!input.accept.split(',').includes(file.type));
+      if(oversized)photoMessage=`La foto "${oversized.name}" supera el límite de 2 MB.`;
+      else if(unsupported)photoMessage=`El archivo "${unsupported.name}" no es una foto JPG, PNG o WEBP.`;
+    }
+    if(video?.files[0]){
+      const selectedVideo=video.files[0];
+      if(selectedVideo.type!=='video/mp4'||selectedVideo.size>20*1024*1024)videoMessage=`El video "${selectedVideo.name}" debe ser MP4 y pesar hasta 20 MB.`;
+    }
+    const messages=[photoMessage,videoMessage].filter(Boolean);
+    if(feedback)feedback.textContent=messages.join(' ');
+    input.setAttribute('aria-invalid',photoMessage?'true':'false');
+    video?.setAttribute('aria-invalid',videoMessage?'true':'false');
+    return messages.length===0;
+  }
+
+  function focusProblem(el, showNativeMessage = false) {
+    if (!el) return;
+    el.setAttribute('aria-invalid','true');
+    if(!el.closest('.media-manager'))el.closest('.field')?.classList.add('has-error');
+    const section=el.closest('.field, .offer-fields, .file-picker') || el;
+    section.scrollIntoView({behavior:'smooth',block:'center'});
+    el.focus({preventScroll:true});
+    if(showNativeMessage && typeof el.reportValidity==='function') el.reportValidity();
+  }
+
+  function offerProblemTarget() {
+    const group=form.querySelector('.offer-fields');
+    if(!group?.classList.contains('has-error')) return null;
+    const selectedRows=[...group.querySelectorAll('[data-offer-row]')]
+      .filter(row=>row.querySelector('input[type="checkbox"]')?.checked);
+    for(const row of selectedRows){
+      const fields=[...row.querySelectorAll('.offer-details input[type="number"]')]
+        .filter(input=>!input.closest('[hidden]'));
+      const invalid=fields.find(input=>!input.value || Number(input.value)<=0 || !input.validity.valid);
+      if(invalid)return invalid;
+    }
+    return group.querySelector('input[type="checkbox"]');
   }
 
   function validateNumber(el, message) {
@@ -138,12 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
       feedback.className = 'field-feedback field-error';
       field.append(feedback);
     }
+    el.setAttribute('aria-invalid','true');
     if (feedback) feedback.textContent = message;
     field?.classList.add('has-error');
   }
 
   function clearNumberError(el) {
     const field=el.closest('.field');
+    el.setAttribute('aria-invalid','false');
     field?.querySelector('[data-live-error]')?.remove();
     field?.classList.remove('has-error');
   }
@@ -156,6 +196,21 @@ document.addEventListener('DOMContentLoaded', () => {
   form.querySelector('[name="fotos[]"]')?.addEventListener('change',validateMedia);
   form.querySelector('[name="video"]')?.addEventListener('change',validateMedia);
 
+  if(form.dataset.serverErrors==='true'){
+    const firstField=form.querySelector('.field.has-error, .offer-fields.has-error');
+    let serverTarget=firstField?.querySelector('input:not([type="hidden"]),select,textarea');
+    if(!serverTarget){
+      const mediaField=form.querySelector('.media-manager[data-server-media-error]:not([data-server-media-error=""])');
+      const serverMessage=mediaField?.dataset.serverMediaError||'';
+      if(mediaField){
+        serverTarget=/^el video/i.test(serverMessage)
+          ? form.querySelector('[name="video"]')
+          : form.querySelector('[name="fotos[]"]');
+      }
+    }
+    focusProblem(serverTarget || offerProblemTarget());
+  }
+
   form.addEventListener('submit', event => {
     const invalid = controls.filter(el => !validate(el, true));
     const offersValid = validateOffers();
@@ -164,9 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const invalidFiles=[...form.querySelectorAll(':invalid')].filter(el=>!el.disabled);
     if (invalid.length || !offersValid || !documentsValid || !mediaValid || invalidFiles.length) {
       event.preventDefault();
-      const first = invalid[0] || invalidFiles[0];
-      if (first) { first.focus(); first.reportValidity(); }
-      else form.querySelector('.offer-fields')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const first = invalid[0]
+        || invalidFiles[0]
+        || form.querySelector('.file-picker.has-error input[type="file"]')
+        || offerProblemTarget()
+        || form.querySelector('[name="fotos[]"][aria-invalid="true"], [name="video"][aria-invalid="true"]');
+      if(first)focusProblem(first,true);
     }
   });
 });

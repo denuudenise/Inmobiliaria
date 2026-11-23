@@ -9,8 +9,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     verify_csrf();
     try {
         $db->beginTransaction(); $context=$dao->context($kind,$id,$user,true);
-        $dao->save($context['property'],$context['request'],(int)$user['id'],$_POST);
-        $db->commit(); flash('Documentación e impuestos guardados correctamente.');
+        if (($_POST['accion']??'')==='eliminar_documento') {
+            $deletedPath=$dao->deleteDocument($context,(int)($_POST['id_documento']??0));
+            $db->commit(); if($deletedPath && is_file($deletedPath))unlink($deletedPath);
+            flash('Documento eliminado de la ficha.');
+        } else {
+            $dao->save($context['property'],$context['request'],(int)$user['id'],$_POST);
+            $db->commit(); flash('Documentación e impuestos guardados correctamente.');
+        }
         redirect('/Inmobiliaria/ficha-privada.php?tipo='.urlencode($kind).'&id='.$id);
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack(); $dao->cleanup();
@@ -28,7 +34,7 @@ require __DIR__.'/sistema/Vistas/Diseno/encabezado.php';
 <section class="content-card"><h2>Documentación privada</h2>
 <?php if (!empty($context['faltan_planos']) || !empty($context['falta_escritura'])): ?><div class="notice"><strong>Documentación pendiente:</strong> <?= !empty($context['faltan_planos'])?'planos':'' ?><?= !empty($context['faltan_planos']) && !empty($context['falta_escritura'])?' y ':'' ?><?= !empty($context['falta_escritura'])?'escritura':'' ?>. <?php if ($context['observaciones_documentacion']!==''): ?><?= e($context['observaciones_documentacion']) ?><?php endif; ?></div><?php endif; ?>
 <?php if (!$records['documentos']): ?><p>No hay documentos cargados.</p><?php endif; ?>
-<ul class="private-documents"><?php foreach ($records['documentos'] as $doc): ?><li><strong><?= e($doc['tipo']) ?></strong> — <a href="/Inmobiliaria/documento.php?id=<?= (int)$doc['id_documento'] ?>"><?= e($doc['nombre']) ?></a><small> · <?= e($doc['fecha']) ?></small></li><?php endforeach; ?></ul></section>
+<ul class="private-documents"><?php foreach ($records['documentos'] as $doc): ?><li><strong><?= e($doc['tipo']) ?></strong> — <a href="/Inmobiliaria/documento.php?id=<?= (int)$doc['id_documento'] ?>"><?= e($doc['nombre']) ?></a><small> · <?= e($doc['fecha']) ?></small><form method="post" onsubmit="return confirm('¿Eliminar este documento de la ficha?')"><?php csrf_field(); ?><input type="hidden" name="accion" value="eliminar_documento"><input type="hidden" name="id_documento" value="<?= (int)$doc['id_documento'] ?>"><button class="btn btn-outline btn-small" type="submit">Eliminar</button></form></li><?php endforeach; ?></ul></section>
 <section class="content-card"><h2>Impuestos registrados</h2>
 <?php if (!$records['propiedad_impuestos']): ?><p>No hay impuestos cargados.</p><?php else: ?>
 <div class="table-wrap"><table class="table"><thead><tr><th>Concepto</th><th>Período</th><th>Base</th><th>Porcentaje</th><th>Importe</th></tr></thead><tbody>

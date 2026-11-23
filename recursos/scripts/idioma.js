@@ -15,6 +15,16 @@
     // These labels combine interface terms with names, prices or counts.
     function english(source) {
         if (Object.hasOwn(catalog, source)) return catalog[source];
+        const oversizedPhoto = source.match(/^La foto "(.+)" supera el límite de 2 MB\.$/u);
+        if (oversizedPhoto) return `Photo "${oversizedPhoto[1]}" exceeds the 2 MB limit.`;
+        const unsupportedPhoto = source.match(/^El archivo "(.+)" no es una foto JPG, PNG o WEBP\.$/u);
+        if (unsupportedPhoto) return `File "${unsupportedPhoto[1]}" is not a JPG, PNG or WEBP image.`;
+        const invalidPhoto = source.match(/^La foto "(.+)" debe ser JPG, PNG o WEBP\.$/u);
+        if (invalidPhoto) return `Photo "${invalidPhoto[1]}" must be JPG, PNG or WEBP.`;
+        const invalidVideo = source.match(/^El video "(.+)" debe ser MP4 y pesar hasta 20 MB\.$/u);
+        if (invalidVideo) return `Video "${invalidVideo[1]}" must be MP4 and no larger than 20 MB.`;
+        const uploadFailure = source.match(/^No se pudo cargar la foto "(.+)"\. Revisá el archivo e intentá nuevamente\.$/u);
+        if (uploadFailure) return `Could not upload photo "${uploadFailure[1]}". Check the file and try again.`;
         const badge = source.match(/^(●|▱|♧)\s*(.*)$/u);
         if (badge) return badge[1] + ' ' + english(badge[2]);
         if (source.endsWith(' / Nuevo Hogar')) return label(source.split(' / ')[0]) + ' / Nuevo Hogar';
@@ -117,15 +127,22 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const selector = document.getElementById('ui-language');
-        selector.value = language;
-        selector.addEventListener('change', () => {
-            language = selector.value === 'en' ? 'en' : 'es';
+        const switcher = document.getElementById('ui-language-toggle');
+        const syncSwitch = () => {
+            const english = language === 'en';
+            switcher?.classList.toggle('is-english', english);
+            switcher?.setAttribute('aria-checked', String(english));
+        };
+        const setLanguage = nextLanguage => {
+            language = nextLanguage === 'en' ? 'en' : 'es';
             document.documentElement.lang = language;
             document.cookie = 'inmo_lang=' + language + '; Path=/Inmobiliaria/; Max-Age=31536000; SameSite=Lax';
+            syncSwitch();
             refresh();
             document.dispatchEvent(new Event('ui-language-change'));
-        });
+        };
+        syncSwitch();
+        switcher?.addEventListener('click', () => setLanguage(language === 'en' ? 'es' : 'en'));
         refresh();
         // Validation hints, status messages and favorite buttons can change after load.
         new MutationObserver(records => {
@@ -138,7 +155,8 @@
         });
         window.addEventListener('pageshow', () => {
             language = /(?:^|;\s*)inmo_lang=en(?:;|$)/.test(document.cookie) ? 'en' : 'es';
-            document.documentElement.lang = selector.value = language;
+            document.documentElement.lang = language;
+            syncSwitch();
             refresh();
         });
     });

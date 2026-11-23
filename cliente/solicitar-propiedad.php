@@ -164,7 +164,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
             <div class="request-layout">
 
             
-                <form class="form-panel request-validation-form" id="solicitud-propiedad-form" method="post" enctype="multipart/form-data" novalidate>
+                <form class="form-panel request-validation-form" id="solicitud-propiedad-form" method="post" enctype="multipart/form-data" novalidate data-server-errors="<?= $fieldErrors ? 'true' : 'false' ?>">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
                     <div class="form-grid">
@@ -368,7 +368,7 @@ require dirname(__DIR__) . '/sistema/Vistas/Diseno/encabezado.php';
                      
                         <?php require dirname(__DIR__).'/sistema/Vistas/Diseno/expediente-form.php'; ?>
 <?php $offerKind='solicitud'; $offerId=0; require dirname(__DIR__).'/sistema/Vistas/Diseno/ofertas-form.php'; ?>
-<div class="field full media-manager<?= isset($fieldErrors['multimedia'])?' has-error':'' ?>" data-media-manager>
+<div class="field full media-manager" data-media-manager data-server-media-error="<?= e($fieldErrors['multimedia']??'') ?>">
     <h3>Fotos y video de la propiedad</h3>
     <p class="help-text">La primera foto será la portada. Después ordená los ambientes principales y dejá para el final los detalles y exteriores. Podés mover las miniaturas con las flechas y revisar la vista previa antes de enviar.</p>
     <ol class="media-sort-list" data-sort-list></ol><input type="hidden" name="orden_fotos" value="" data-order-value>
