@@ -82,7 +82,7 @@
   "Buscá por barrio, localidad o zona.": "Search by neighborhood, town or area.",
   "Cada archivo debe pesar hasta 2 MB y cargarse correctamente.": "Each file must upload successfully and be no larger than 2 MB.",
   "Cada contacto queda asociado al cliente y a una propiedad.": "Each contact is linked to a client and a property.",
-  "Cada documento debe cargarse correctamente y pesar hasta 2 MB.": "Each document must upload successfully and be no larger than 2 MB.",
+  "Cada documento debe cargarse correctamente y pesar hasta 2 MB.": "Each document must upload correctly and be no larger than 2 MB.",
   "Cada documento debe pesar entre 1 byte y 2 MB.": "Each document must be between 1 byte and 2 MB.",
   "Cada foto debe pesar hasta 2 MB.": "Each photo must be no larger than 2 MB.",
   "Calefacción": "Heating",
@@ -845,5 +845,9 @@
   "Explorá las propiedades disponibles y contanos qué estás buscando.": "Explore the available properties and tell us what you are looking for.",
   "Ver el catálogo": "View the catalog",
   "Adjuntá los planos o marcá que todavía no los tenés.": "Attach the floor plans or mark that you do not have them yet.",
-  "Adjuntá la escritura o marcá que todavía no la tenés.": "Attach the deed or mark that you do not have it yet."
+  "Adjuntá la escritura o marcá que todavía no la tenés.": "Attach the deed or mark that you do not have it yet.",
+  "No se envió la solicitud. Revisá estos campos:": "The request was not submitted. Review these fields:",
+  "Completá el concepto del impuesto.": "Enter the tax description.",
+  "Ingresá un porcentaje entre 0 y 100.": "Enter a percentage between 0 and 100.",
+  "Completá el período mensual del impuesto.": "Enter the monthly tax period."
 }

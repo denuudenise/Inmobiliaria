@@ -26,205 +26,189 @@ document.addEventListener('DOMContentLoaded', () => {
     document_notes: (value, el) => !el.required || (value.length >= 10 && value.length <= 1000)
   };
 
-  function validate(el, force = false) {
-    const name = el.dataset.validate;
-    const value = el.type === 'checkbox' ? '' : el.value.trim();
-    const empty = el.required && (el.type === 'checkbox' ? !el.checked : value === '');
-    const valid = !empty && checks[name](value, el);
-    const show = force || el.dataset.touched === 'true';
-    const field = el.closest('.field');
-    const feedback = document.getElementById(`ayuda-${el.name}`) || (field ? field.querySelector('.field-feedback') : null);
-    el.setAttribute('aria-invalid', show && !valid ? 'true' : 'false');
-    el.setCustomValidity(show && !valid ? (empty ? 'Completá este campo.' : messages[name]) : '');
-    field?.classList.toggle('has-error', show && !valid);
-    field?.classList.toggle('is-valid', show && valid && value !== '');
-    if (feedback && show) {
-      feedback.textContent = !valid ? (empty ? 'Este campo es obligatorio.' : messages[name]) : (value ? 'Correcto.' : (el.dataset.hint || ''));
+  const errors = new Map();
+  let submitted = form.dataset.serverErrors === 'true';
+  const summary = document.createElement('div');
+  summary.className = 'validation-summary';
+  summary.setAttribute('role', 'alert');
+  summary.hidden = true;
+  form.prepend(summary);
+
+  function setError(el, message) {
+    if (!el) return;
+    const field = el.closest('.field') || el.parentElement;
+    let feedback = document.getElementById(`ayuda-${el.name}`);
+    if (!feedback) feedback = field.querySelector(`[data-validation-for="${el.id}"]`);
+    if (!el.id) el.id = `validation-field-${[...form.elements].indexOf(el)}`;
+    if (!feedback) {
+      feedback = document.createElement('small');
+      feedback.className = 'field-feedback field-error';
+      feedback.dataset.validationFor = el.id;
+      feedback.id = `error-${el.id}`;
+      field.append(feedback);
     }
-    return valid;
+    if (!feedback.id) feedback.id = `error-${el.id}`;
+    const described = new Set((el.getAttribute('aria-describedby') || '').split(' ').filter(Boolean));
+    described.add(feedback.id);
+    el.setAttribute('aria-describedby', [...described].join(' '));
+    el.setAttribute('aria-invalid', message ? 'true' : 'false');
+    // The summary and inline messages handle feedback without a second native scroll.
+    el.setCustomValidity('');
+    if (message) errors.set(el, message); else errors.delete(el);
+    feedback.textContent = message;
+    feedback.hidden = !message;
+    feedback.classList.toggle('field-error', Boolean(message));
+    field.classList.toggle('has-error', Boolean(field.querySelector('[aria-invalid="true"]')));
+    field.classList.remove('is-valid');
   }
 
-  controls.forEach(el => {
-    if (el.getAttribute('aria-invalid') === 'true') el.dataset.touched = 'true';
-    const feedback = document.getElementById(`ayuda-${el.name}`);
-    el.addEventListener('focus', () => {
-      el.dataset.touched = 'true';
-      el.closest('.field')?.classList.add('is-touched');
-      if (el.value || el.type === 'checkbox') validate(el);
-      else if (feedback) feedback.textContent = el.dataset.hint || 'Completá este campo.';
-    });
-    el.addEventListener('blur', () => { el.dataset.touched = 'true'; validate(el); });
-    el.addEventListener('input', () => { if (el.dataset.touched === 'true') validate(el); });
-    el.addEventListener('change', () => { el.dataset.touched = 'true'; validate(el); });
-  });
+  function validate(el) {
+    const value = el.type === 'checkbox' ? '' : el.value.trim();
+    const empty = el.required && (el.type === 'checkbox' ? !el.checked : !value);
+    const valid = !empty && checks[el.dataset.validate](value, el);
+    setError(el, valid ? '' : messages[el.dataset.validate]);
+    return valid;
+  }
 
   function validateOffers() {
-    const group = form.querySelector('.offer-fields');
-    if (!group) return true;
-    const rows = [...group.querySelectorAll('[data-offer-row]')];
+    const rows = [...form.querySelectorAll('[data-offer-row]')];
     const selected = rows.filter(row => row.querySelector('input[type="checkbox"]').checked);
-    const feedback = group.querySelector('#ayuda-ofertas');
-    let message = selected.length ? '' : 'Seleccioná al menos una operación.';
-    group.querySelectorAll('[data-offer-row] input[type="checkbox"]').forEach((checkbox,index)=>{
-      checkbox.setAttribute('aria-invalid',!selected.length && index===0?'true':'false');
-    });
-    for (const row of selected) {
-      const numericFields = [...row.querySelectorAll('.offer-details input[type="number"]')];
-      const price = numericFields[0];
-      if (!price.value || Number(price.value) <= 0 || Number(price.value) > 9999999999.99 || price.validity.stepMismatch) {
-        message = 'Ingresá un precio mayor a cero para cada operación seleccionada.';
-        price.dataset.touched = 'true';
-        validateNumber(price, message);
-        break;
-      }
-      clearNumberError(price);
+    rows.forEach((row, index) => {
+      const box = row.querySelector('input[type="checkbox"]');
+      setError(box, !selected.length && index === 0 ? 'Seleccioná al menos una operación.' : '');
+      const numbers = [...row.querySelectorAll('.offer-details input[type="number"]')];
+      numbers.forEach(el => setError(el, ''));
+      if (!box.checked) return;
+      const price = numbers[0];
       const minimum = row.querySelector('[data-minimum-price]');
-      if (minimum && (!minimum.value || Number(minimum.value) <= 0 || Number(minimum.value) > Number(price.value) || minimum.validity.stepMismatch)) {
-        message = 'El monto mínimo debe ser mayor a cero y no puede superar el precio de venta.';
-        minimum.dataset.touched = 'true';
-        validateNumber(minimum, message);
-        break;
-      }
-      if (minimum) clearNumberError(minimum);
-    }
-    rows.filter(row => !row.querySelector('input[type="checkbox"]').checked).forEach(row=>row.querySelectorAll('[data-live-error]').forEach(error=>{error.remove();error.closest('.field')?.classList.remove('has-error')}));
-    if (feedback) feedback.textContent = message;
-    group.classList.toggle('has-error', Boolean(message));
-    return !message;
+      if (!price.value || Number(price.value) <= 0 || Number(price.value) > 9999999999.99 || !price.validity.valid)
+        setError(price, 'Ingresá un precio mayor a cero para cada operación seleccionada.');
+      if (minimum && (!minimum.value || Number(minimum.value) <= 0 || Number(minimum.value) > Number(price.value) || !minimum.validity.valid))
+        setError(minimum, 'El monto mínimo debe ser mayor a cero y no puede superar el precio de venta.');
+    });
+    const group = form.querySelector('.offer-fields');
+    group?.classList.toggle('has-error', Boolean(group.querySelector('[aria-invalid="true"]')));
+    const oldFeedback = form.querySelector('#ayuda-ofertas');
+    if (oldFeedback) oldFeedback.textContent = '';
   }
 
-  function validateRequiredDocuments() {
-    let valid=true;
-    for (const [fieldName, checkboxName, label, pronoun] of [['planos','faltan_planos','los planos','los tenés'],['escrituras','falta_escritura','la escritura','la tenés']]) {
-      const input=form.querySelector(`[name="${fieldName}[]"]`);
-      const missing=form.querySelector(`[name="${checkboxName}"]`);
-      const hasFile=input && input.files.length>0;
-      if (!hasFile && !missing?.checked) {
-        valid=false;
-        input?.setAttribute('aria-invalid','true');
-        input?.parentElement.classList.add('has-error');
-        let message=input?.parentElement.querySelector('[data-required-document-error]');
-        if(!message && input?.parentElement){message=document.createElement('small');message.dataset.requiredDocumentError='';message.className='field-feedback field-error';input.parentElement.append(message)}
-        if(message)message.textContent=`Adjuntá ${label} o marcá que todavía no ${pronoun}.`;
-      } else {
-        input?.setAttribute('aria-invalid','false');
-        input?.parentElement.querySelector('[data-required-document-error]')?.remove();
-        input?.parentElement.classList.remove('has-error');
-      }
+  function validateDocuments() {
+    const notes = form.querySelector('[data-document-notes]');
+    const missing = [...form.querySelectorAll('[data-document-missing]')];
+    if (notes) notes.required = missing.some(box => box.checked);
+    for (const [name, boxName, message] of [
+      ['planos', 'faltan_planos', 'Adjuntá los planos o marcá que todavía no los tenés.'],
+      ['escrituras', 'falta_escritura', 'Adjuntá la escritura o marcá que todavía no la tenés.']
+    ]) {
+      const input = form.querySelector(`[name="${name}[]"]`);
+      const box = form.querySelector(`[name="${boxName}"]`);
+      const absent = !input?.files.length && !box?.checked;
+      setError(input, absent ? message : '');
+      box?.closest('label')?.classList.toggle('document-choice-error', absent);
     }
-    const notes=form.querySelector('[data-document-notes]');
-    if(notes?.required && notes.value.trim().length<10)valid=false;
-    return valid;
+    const files = [...form.querySelectorAll('[data-private-files]')];
+    const total = files.reduce((sum, input) => sum + input.files.length, 0);
+    files.forEach(input => {
+      if (!input.files.length) { if (input.name === 'comprobantes[]') setError(input, ''); return; }
+      const badSize = [...input.files].some(file => file.size <= 0 || file.size > 2 * 1024 * 1024);
+      const badType = [...input.files].some(file => !input.accept.split(',').includes(file.type));
+      setError(input, total > 8 ? 'Adjuntá hasta 8 documentos privados por envío.' : badSize ? 'Cada documento debe cargarse correctamente y pesar hasta 2 MB.' : badType ? 'Usá PDF, JPG, PNG o WEBP para los documentos.' : '');
+    });
+    if (notes) validate(notes);
   }
 
   function validateMedia() {
-    const input=form.querySelector('[name="fotos[]"]');
-    const video=form.querySelector('[name="video"]');
-    const feedback=document.getElementById('ayuda-multimedia');
-    if(!input)return true;
-    const files=[...input.files];
-    let photoMessage='';
-    let videoMessage='';
-    if(files.length>8)photoMessage='Podés adjuntar hasta 8 fotos.';
-    else {
-      const oversized=files.find(file=>file.size<=0||file.size>2*1024*1024);
-      const unsupported=files.find(file=>!input.accept.split(',').includes(file.type));
-      if(oversized)photoMessage=`La foto "${oversized.name}" supera el límite de 2 MB.`;
-      else if(unsupported)photoMessage=`El archivo "${unsupported.name}" no es una foto JPG, PNG o WEBP.`;
+    const photos = form.querySelector('[name="fotos[]"]');
+    const video = form.querySelector('[name="video"]');
+    if (photos) {
+      const files = [...photos.files];
+      const large = files.find(file => file.size <= 0 || file.size > 2 * 1024 * 1024);
+      const unsupported = files.find(file => !photos.accept.split(',').includes(file.type));
+      setError(photos, files.length > 8 ? 'Podés adjuntar hasta 8 fotos.' : large ? `La foto "${large.name}" supera el límite de 2 MB.` : unsupported ? `El archivo "${unsupported.name}" no es una foto JPG, PNG o WEBP.` : '');
     }
-    if(video?.files[0]){
-      const selectedVideo=video.files[0];
-      if(selectedVideo.type!=='video/mp4'||selectedVideo.size>20*1024*1024)videoMessage=`El video "${selectedVideo.name}" debe ser MP4 y pesar hasta 20 MB.`;
-    }
-    const messages=[photoMessage,videoMessage].filter(Boolean);
-    if(feedback)feedback.textContent=messages.join(' ');
-    input.setAttribute('aria-invalid',photoMessage?'true':'false');
-    video?.setAttribute('aria-invalid',videoMessage?'true':'false');
-    return messages.length===0;
+    const file = video?.files[0];
+    setError(video, file && (file.type !== 'video/mp4' || file.size <= 0 || file.size > 20 * 1024 * 1024) ? `El video "${file.name}" debe ser MP4 y pesar hasta 20 MB.` : '');
   }
 
-  function focusProblem(el, showNativeMessage = false) {
+  function validateTax() {
+    const fields = ['concepto', 'base', 'porcentaje', 'periodo'].map(key => form.querySelector(`[name="impuesto_${key}"]`));
+    if (fields.some(el => !el)) return;
+    fields.forEach(el => setError(el, ''));
+    if (!fields.some(el => el.value.trim())) return;
+    const [concept, base, rate, period] = fields;
+    if (!concept.value.trim()) setError(concept, 'Completá el concepto del impuesto.');
+    if (!/^\d{1,9}(?:\.\d{1,2})?$/.test(base.value) || Number(base.value) <= 0) setError(base, 'La base del impuesto debe ser mayor a cero.');
+    if (!/^\d{1,3}(?:\.\d{1,2})?$/.test(rate.value) || Number(rate.value) > 100) setError(rate, 'Ingresá un porcentaje entre 0 y 100.');
+    if (!/^(?:19|20|21)\d{2}-(?:0[1-9]|1[0-2])$/.test(period.value)) setError(period, 'Completá el período mensual del impuesto.');
+  }
+
+  function orderedErrors() {
+    return [...form.querySelectorAll('input,select,textarea')].filter(el => errors.has(el) && !el.disabled);
+  }
+  function focusProblem(el) {
     if (!el) return;
-    el.setAttribute('aria-invalid','true');
-    if(!el.closest('.media-manager'))el.closest('.field')?.classList.add('has-error');
-    const section=el.closest('.field, .offer-fields, .file-picker') || el;
-    section.scrollIntoView({behavior:'smooth',block:'center'});
-    el.focus({preventScroll:true});
-    if(showNativeMessage && typeof el.reportValidity==='function') el.reportValidity();
+    for (let parent = el.parentElement; parent; parent = parent.parentElement)
+      if (parent.tagName === 'DETAILS') parent.open = true;
+    el.focus({preventScroll: true});
+    el.scrollIntoView({behavior: 'instant', block: 'center'});
   }
-
-  function offerProblemTarget() {
-    const group=form.querySelector('.offer-fields');
-    if(!group?.classList.contains('has-error')) return null;
-    const selectedRows=[...group.querySelectorAll('[data-offer-row]')]
-      .filter(row=>row.querySelector('input[type="checkbox"]')?.checked);
-    for(const row of selectedRows){
-      const fields=[...row.querySelectorAll('.offer-details input[type="number"]')]
-        .filter(input=>!input.closest('[hidden]'));
-      const invalid=fields.find(input=>!input.value || Number(input.value)<=0 || !input.validity.valid);
-      if(invalid)return invalid;
+  function showSummary() {
+    summary.replaceChildren();
+    const pending = orderedErrors();
+    summary.hidden = !pending.length;
+    if (!pending.length) return;
+    const heading = document.createElement('strong');
+    heading.textContent = 'No se envió la solicitud. Revisá estos campos:';
+    summary.append(heading);
+    const list = document.createElement('ul');
+    pending.forEach(el => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = `#${el.id}`;
+      link.textContent = errors.get(el);
+      link.addEventListener('click', event => { event.preventDefault(); focusProblem(el); });
+      item.append(link); list.append(item);
+    });
+    summary.append(list);
+  }
+  function validateAll() {
+    validateDocuments();
+    controls.forEach(validate);
+    validateOffers(); validateMedia(); validateTax();
+    for (const el of form.querySelectorAll('input,select,textarea')) {
+      if (!el.disabled && !el.validity.valid && !errors.has(el))
+        setError(el, el.validationMessage || 'Completá este campo.');
     }
-    return group.querySelector('input[type="checkbox"]');
+    showSummary();
   }
-
-  function validateNumber(el, message) {
-    const field = el.closest('.field');
-    let feedback = field?.querySelector('[data-live-error]');
-    if (!feedback && field) {
-      feedback = document.createElement('small');
-      feedback.dataset.liveError = '';
-      feedback.className = 'field-feedback field-error';
-      field.append(feedback);
-    }
-    el.setAttribute('aria-invalid','true');
-    if (feedback) feedback.textContent = message;
-    field?.classList.add('has-error');
-  }
-
-  function clearNumberError(el) {
-    const field=el.closest('.field');
-    el.setAttribute('aria-invalid','false');
-    field?.querySelector('[data-live-error]')?.remove();
-    field?.classList.remove('has-error');
-  }
-
-  const offerGroup=form.querySelector('.offer-fields');
-  offerGroup?.addEventListener('input',validateOffers);
-  offerGroup?.addEventListener('change',validateOffers);
-  form.querySelectorAll('[name="faltan_planos"],[name="falta_escritura"],[name="planos[]"],[name="escrituras[]"]').forEach(el=>el.addEventListener('change',validateRequiredDocuments));
-  form.querySelector('[data-document-notes]')?.addEventListener('input',el=>{if(el.currentTarget.dataset.touched==='true')validate(el.currentTarget)});
-  form.querySelector('[name="fotos[]"]')?.addEventListener('change',validateMedia);
-  form.querySelector('[name="video"]')?.addEventListener('change',validateMedia);
-
-  if(form.dataset.serverErrors==='true'){
-    const firstField=form.querySelector('.field.has-error, .offer-fields.has-error');
-    let serverTarget=firstField?.querySelector('input:not([type="hidden"]),select,textarea');
-    if(!serverTarget){
-      const mediaField=form.querySelector('.media-manager[data-server-media-error]:not([data-server-media-error=""])');
-      const serverMessage=mediaField?.dataset.serverMediaError||'';
-      if(mediaField){
-        serverTarget=/^el video/i.test(serverMessage)
-          ? form.querySelector('[name="video"]')
-          : form.querySelector('[name="fotos[]"]');
-      }
-    }
-    focusProblem(serverTarget || offerProblemTarget());
-  }
-
   form.addEventListener('submit', event => {
-    const invalid = controls.filter(el => !validate(el, true));
-    const offersValid = validateOffers();
-    const documentsValid=validateRequiredDocuments();
-    const mediaValid=validateMedia();
-    const invalidFiles=[...form.querySelectorAll(':invalid')].filter(el=>!el.disabled);
-    if (invalid.length || !offersValid || !documentsValid || !mediaValid || invalidFiles.length) {
-      event.preventDefault();
-      const first = invalid[0]
-        || invalidFiles[0]
-        || form.querySelector('.file-picker.has-error input[type="file"]')
-        || offerProblemTarget()
-        || form.querySelector('[name="fotos[]"][aria-invalid="true"], [name="video"][aria-invalid="true"]');
-      if(first)focusProblem(first,true);
-    }
+    submitted = true;
+    validateAll();
+    const first = orderedErrors()[0];
+    if (first) { event.preventDefault(); focusProblem(first); }
   });
+  for (const type of ['input', 'change']) form.addEventListener(type, event => {
+    if (submitted) validateAll();
+    else if (event.target.matches('[data-validate]') && event.target.dataset.touched === 'true') validate(event.target);
+  });
+  controls.forEach(el => el.addEventListener('blur', () => {
+    el.dataset.touched = 'true';
+    validate(el);
+  }));
+  if (submitted) {
+    for (const field of form.querySelectorAll('.field.has-error')) {
+      const el = field.querySelector('[aria-invalid="true"]') || field.querySelector('textarea,input:not([type="hidden"]),select');
+      const feedback = field.querySelector('.field-feedback');
+      if (el && feedback?.textContent.trim()) setError(el, feedback.textContent.trim());
+    }
+    const offerMessage = form.querySelector('#ayuda-ofertas')?.textContent.trim();
+    if (offerMessage) {
+      const selected = [...form.querySelectorAll('[data-offer-row]')].find(row => row.querySelector('input[type="checkbox"]').checked);
+      setError(selected?.querySelector('input[type="number"]') || form.querySelector('[data-offer-row] input[type="checkbox"]'), offerMessage);
+    }
+    const media = form.querySelector('[data-server-media-error]');
+    if (media?.dataset.serverMediaError) setError(form.querySelector(/^el video/i.test(media.dataset.serverMediaError) ? '[name="video"]' : '[name="fotos[]"]'), media.dataset.serverMediaError);
+    showSummary();
+    focusProblem(orderedErrors()[0]);
+  }
 });

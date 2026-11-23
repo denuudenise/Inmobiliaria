@@ -3967,3 +3967,14 @@ button:disabled {
     text-align: center;
   }
 }
+
+/* Visible, linked feedback for property listing requests. */
+.validation-summary {border:1px solid #b42318;background:#fff4f2;color:#8f2018;padding:18px;border-radius:12px;margin-bottom:20px;}
+.validation-summary[hidden] {display:none;}
+.validation-summary ul {margin:10px 0 0;padding-left:22px;}
+.validation-summary a {color:inherit;text-decoration:underline;}
+.request-validation-form [aria-invalid="true"] {border-color:#b42318!important;outline:2px solid #b42318;outline-offset:2px;}
+.request-validation-form .document-choice-error {color:#a1271c;background:#fff4f2;border-left:3px solid #b42318;padding:10px;}
+.request-validation-form .field-feedback.field-error {display:block!important;color:#a1271c;}
+.request-validation-form .field-feedback[hidden] {display:none!important;}
+.request-validation-form .field {scroll-margin-top:140px;}

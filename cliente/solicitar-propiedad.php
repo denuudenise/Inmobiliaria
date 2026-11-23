@@ -60,6 +60,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!isset($_POST['declaracion'])) $fieldErrors['declaracion']='Confirmá que los datos son correctos para enviar la solicitud.';
 
+    // Report all missing document choices before attempting any uploads.
+    foreach (['planos'=>'faltan_planos', 'escrituras'=>'falta_escritura'] as $fileKey=>$checkboxKey) {
+        $hasUpload = false;
+        foreach ((array)($_FILES[$fileKey]['error'] ?? []) as $uploadStatus) {
+            if ((int)$uploadStatus !== UPLOAD_ERR_NO_FILE) $hasUpload = true;
+        }
+        if (!$hasUpload && empty($_POST[$checkboxKey])) {
+            $fieldErrors[$fileKey] = $fileKey === 'planos'
+                ? 'Adjuntá los planos o marcá que todavía no los tenés.'
+                : 'Adjuntá la escritura o marcá que todavía no la tenés.';
+        }
+    }
+    $documentNotes = trim((string)($_POST['observaciones_documentacion'] ?? ''));
+    if (mb_strlen($documentNotes)>1000 || ((!empty($_POST['faltan_planos']) || !empty($_POST['falta_escritura'])) && mb_strlen($documentNotes)<10)) {
+        $fieldErrors['observaciones_documentacion']='Si te falta un documento, explicá la situación en al menos 10 caracteres.';
+    }
+
     if ($fieldErrors) {
         $errorMessage = 'Hay campos para corregir. Te indicamos qué revisar debajo de cada uno.';
     } else {
